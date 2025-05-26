@@ -1,0 +1,96 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>에스엠 산업안전</title>
+    <link rel="stylesheet" href="style.css">
+</head>
+<body>
+<!-- 회사소개 팝업 -->
+<div id="popup" class="popup">
+    <div class="popup-content">
+        <span class="close">&times;</span>
+        <p>우리 회사에 오신 것을 환영합니다!</p>
+    </div>
+</div>
+
+<!-- 상단 네비게이션 -->
+<header>
+    <a href="index.html"><img src="assets/images/logo_2.png" alt="회사 로고" class="logo"></a>
+    <nav>
+        <ul class="nav-links">
+            <li><a href="#">회사소개</a></li>
+            <li><a href="#">Q&A 게시판</a></li>
+            <li><a href="#">자료실</a></li>
+        </ul>
+    </nav>
+</header>
+
+<!-- 슬라이드 배너 -->
+<section class="slideshow-container">
+    <div class="slide-text">
+        <h1 id="slide-title">산업보건 Total Service 제공이 가능한 기업</h1>
+    </div>
+    <div class="slide fade"><img src="assets/images/slideshow_1.png" alt="슬라이드1"></div>
+    <div class="slide fade"><img src="assets/images/slideshow_2.jpg" alt="슬라이드2"></div>
+    <div class="slide fade"><img src="assets/images/slideshow_3.jpg" alt="슬라이드3"></div>
+    <div class="slide fade"><img src="assets/images/slideshow_4.jpeg" alt="슬라이드4"></div>
+    <div class="slide-indicators">
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+        <span class="dot"></span>
+    </div>
+</section>
+
+<!-- 사무실 정보 및 포스터 슬라이드 -->
+<!-- 관련 부분만 발췌 -->
+<section class="info-news bg-blue">
+    <div class="office-info">
+        <div class="map-container">
+            <img src="assets/images/map1.png" alt="사무실지도">
+            <a href="https://map.naver.com/p/entry/place/15865310?c=16.62,0,0,0,dh" class="map-button" target="_blank">지도 보기</a>
+        </div>
+        <h3>에스엠 산업안전</h3>
+        <p><strong>이메일:</strong> yst0803@hanmail.net</p>
+        <p><strong>운영시간:</strong> 평일 08:00 ~ 17:00</p>
+        <p><strong>주소:</strong> 경상남도 양산시 소주로 182 (서창대동아파트, 상가동 205호)</p>
+    </div>
+
+    <div class="news-zone">
+        <h3>새로운 이야기, 소식존</h3>
+        <div class="carousel-wrapper">
+            <div class="poster-carousel" id="poster-carousel">
+                <img src="assets/images/poster1.jpg" alt="포스터1">
+                <img src="assets/images/poster2.jpg" alt="포스터2">
+                <img src="assets/images/poster3.jpg" alt="포스터3">
+            </div>
+        </div>
+    </div>
+</section>
+
+
+<!-- 하단 기관 로고 슬라이드 -->
+<section class="logo-slide bg-blue">
+    <div class="org-carousel" id="org-carousel">
+        <img src="assets/images/gov1.png" alt="안전보건공단" onclick="window.open('https://www.kosha.or.kr')">
+        <img src="assets/images/gov2.png" alt="고용노동부" onclick="window.open('https://www.moel.go.kr')">
+        <img src="assets/images/gov3.png" alt="K-MAS" onclick="window.open('https://www.k-mas.or.kr')">
+    </div>
+</section>
+
+<!-- 푸터 -->
+<footer>
+    <div class="footer-content">
+        <div class="footer-left">
+            <img src="assets/images/logo.png" alt="EN로고">
+            <p>경상남도 양산시 소주로 182(서창대동아파트,상가동 205호)</p>
+            <p>Email: yst0803@hanmail.net | Tel: 0507-0523-1234</p>
+        </div>
+    </div>
+</footer>
+
+<script src="script.js"></script>
+</body>
+</html>

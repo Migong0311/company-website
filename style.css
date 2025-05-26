@@ -1,0 +1,206 @@
+body {
+    margin: 0;
+    font-family: 'Segoe UI', sans-serif;
+    background-color: #fff;
+    color: #333;
+}
+
+.bg-blue {
+    background-color: #e6f2ff;
+}
+
+.popup {
+    position: fixed;
+    top: 0; left: 0;
+    width: 100%; height: 100%;
+    background-color: rgba(0, 0, 0, 0.5);
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    z-index: 9999;
+}
+.popup-content {
+    background: white;
+    padding: 30px;
+    border-radius: 10px;
+    text-align: center;
+}
+.close {
+    float: right;
+    font-size: 24px;
+    cursor: pointer;
+}
+
+header {
+    display: flex;
+    align-items: center;
+    justify-content: space-between;
+    background-color: #ffffff;
+    border-bottom: 1px solid #ccc;
+    padding: 10px 20px;
+}
+.logo {
+    height: 50px;
+    cursor: pointer;
+}
+.nav-links {
+    display: flex;
+    list-style: none;
+    gap: 20px;
+}
+.nav-links li a {
+    text-decoration: none;
+    color: #222;
+    font-weight: bold;
+}
+
+.slideshow-container {
+    position: relative;
+    width: 100%;
+    height: 400px;
+    overflow: hidden;
+}
+.slide {
+    display: none;
+    position: absolute;
+    width: 100%;
+    height: 100%;
+}
+.slide img {
+    width: 100%;
+    height: 100%;
+    object-fit: cover;
+}
+.slide-text {
+    position: absolute;
+    z-index: 10;
+    width: 100%;
+    text-align: center;
+    top: 30%;
+    color: white;
+    text-shadow: 2px 2px 6px rgba(0,0,0,0.7);
+    font-size: 2rem;
+    font-weight: bold;
+}
+.slide-indicators {
+    position: absolute;
+    bottom: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 10px;
+    z-index: 20;
+}
+.dot {
+    width: 12px;
+    height: 12px;
+    border-radius: 50%;
+    background-color: #ccc;
+    cursor: pointer;
+}
+.dot.active {
+    background-color: #007bff;
+}
+
+.info-news {
+    display: flex;
+    padding: 40px 20px;
+    gap: 40px;
+    justify-content: space-around;
+    flex-wrap: wrap;
+}
+.office-info img {
+    width: 100%;
+    max-width: 300px;
+    border-radius: 8px;
+}
+.office-info p {
+    margin: 5px 0;
+}
+.map-container {
+    position: relative;
+    display: inline-block;
+}
+.map-button {
+    position: absolute;
+    top: 10px;
+    right: 10px;
+    background-color: #000;
+    color: #fff;
+    padding: 8px 16px;
+    border-radius: 30px;
+    font-size: 14px;
+    text-decoration: none;
+    font-weight: bold;
+    transition: background-color 0.3s;
+}
+.map-button:hover {
+    background-color: #333;
+}
+
+.news-zone {
+    max-width: 600px;
+}
+.poster-carousel {
+    display: flex;
+    overflow: hidden;
+}
+.poster-carousel img {
+    width: 300px;
+    margin-right: 10px;
+    border-radius: 6px;
+    transition: transform 0.5s ease-in-out;
+}
+
+.logo-slide {
+    padding: 20px;
+    text-align: center;
+}
+.org-carousel {
+    display: flex;
+    overflow: hidden;
+    gap: 20px;
+    justify-content: center;
+}
+.org-carousel img {
+    height: 40px;
+    transition: transform 0.5s ease-in-out;
+}
+
+footer {
+    background-color: #eee;
+    padding: 20px;
+    text-align: center;
+    font-size: 14px;
+}
+.footer-content {
+    display: flex;
+    justify-content: center;
+    flex-wrap: wrap;
+    padding: 10px;
+    align-items: center;
+}
+.footer-left img {
+    height: 40px;
+    margin-bottom: 10px;
+}
+.carousel-wrapper {
+    overflow: hidden;
+    width: 100%;
+    max-width: 620px;
+    margin: 0 auto;
+}
+
+.poster-carousel,
+.org-carousel {
+    display: flex;
+    transition: transform 0.8s ease-in-out;
+}
+
+.poster-carousel img,
+.org-carousel img {
+    width: 300px;
+    height: auto;
+    margin-right: 20px;
+    border-radius: 10px;
+}
