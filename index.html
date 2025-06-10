@@ -5,6 +5,7 @@
     <meta name="viewport" content="width=device-width, initial-scale=1.0">
     <title>에스엠 산업안전</title>
     <link rel="stylesheet" href="style.css">
+    <link rel="stylesheet" href="https://cdnjs.cloudflare.com/ajax/libs/font-awesome/6.5.0/css/all.min.css">
 </head>
 <body>
 <!-- 회사소개 팝업 -->
@@ -18,16 +19,10 @@
 <!-- 상단 네비게이션 -->
 <header>
     <a href="index.html"><img src="assets/images/logo_2.png" alt="회사 로고" class="logo"></a>
-    <nav>
-        <ul class="nav-links">
-            <li><a href="#">회사소개</a></li>
-            <li><a href="#">Q&A 게시판</a></li>
-            <li><a href="#">자료실</a></li>
-        </ul>
-    </nav>
 </header>
 
 <!-- 슬라이드 배너 -->
+<!-- 기존 슬라이드 배너 -->
 <section class="slideshow-container">
     <div class="slide-text">
         <h1 id="slide-title">산업보건 Total Service 제공이 가능한 기업</h1>
@@ -36,16 +31,36 @@
     <div class="slide fade"><img src="assets/images/slideshow_2.jpg" alt="슬라이드2"></div>
     <div class="slide fade"><img src="assets/images/slideshow_3.jpg" alt="슬라이드3"></div>
     <div class="slide fade"><img src="assets/images/slideshow_4.jpeg" alt="슬라이드4"></div>
-    <div class="slide-indicators">
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
-        <span class="dot"></span>
+
+    <div class="slide-indicators above-button">
+        <span class="dot"></span><span class="dot"></span>
+        <span class="dot"></span><span class="dot"></span>
     </div>
 </section>
 
+<!-- 🔵 새로 위치 옮긴 버튼 그룹 -->
+<section class="shortcut-button-section">
+    <div class="shortcut-buttons">
+        <div class="shortcut-btn">
+            <i class="fas fa-building"></i>
+            <div>회사소개</div>
+            <span>Company Introduction</span>
+        </div>
+        <div class="shortcut-btn">
+            <i class="fas fa-phone"></i>
+            <div>Q&A 게시판</div>
+            <span>Phone Inquiry</span>
+        </div>
+        <div class="shortcut-btn">
+            <i class="fas fa-folder-open"></i>
+            <div>자료실</div>
+            <span>Bulletin Board</span>
+        </div>
+    </div>
+</section>
+
+
 <!-- 사무실 정보 및 포스터 슬라이드 -->
-<!-- 관련 부분만 발췌 -->
 <section class="info-news bg-blue">
     <div class="office-info">
         <div class="map-container">
@@ -62,21 +77,22 @@
         <h3>새로운 이야기, 소식존</h3>
         <div class="carousel-wrapper">
             <div class="poster-carousel" id="poster-carousel">
-                <img src="assets/images/poster1.jpg" alt="포스터1">
-                <img src="assets/images/poster2.jpg" alt="포스터2">
-                <img src="assets/images/poster3.jpg" alt="포스터3">
+                <div class="poster-slide"><img src="assets/images/poster1.jpg" alt="포스터1"></div>
+                <div class="poster-slide"><img src="assets/images/poster2.jpg" alt="포스터2"></div>
+                <div class="poster-slide"><img src="assets/images/poster3.jpg" alt="포스터3"></div>
             </div>
         </div>
     </div>
 </section>
 
-
 <!-- 하단 기관 로고 슬라이드 -->
 <section class="logo-slide bg-blue">
-    <div class="org-carousel" id="org-carousel">
-        <img src="assets/images/gov1.png" alt="안전보건공단" onclick="window.open('https://www.kosha.or.kr')">
-        <img src="assets/images/gov2.png" alt="고용노동부" onclick="window.open('https://www.moel.go.kr')">
-        <img src="assets/images/gov3.png" alt="K-MAS" onclick="window.open('https://www.k-mas.or.kr')">
+    <div class="org-carousel-wrapper">
+        <div class="org-carousel" id="org-carousel">
+            <div class="org-slide"><img src="assets/images/gov1.png" alt="안전보건공단" onclick="window.open('https://www.kosha.or.kr')"></div>
+            <div class="org-slide"><img src="assets/images/gov2.png" alt="고용노동부" onclick="window.open('https://www.moel.go.kr')"></div>
+            <div class="org-slide"><img src="assets/images/gov3.png" alt="K-MAS" onclick="window.open('https://www.k-mas.or.kr')"></div>
+        </div>
     </div>
 </section>
 

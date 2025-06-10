@@ -1,5 +1,5 @@
 document.addEventListener("DOMContentLoaded", () => {
-    // ✅ 팝업 동작
+    // 팝업 동작
     const popup = document.getElementById('popup');
     const closeBtn = document.querySelector('.close');
     popup.style.display = "flex";
@@ -8,7 +8,7 @@ document.addEventListener("DOMContentLoaded", () => {
         if (e.target === popup) popup.style.display = "none";
     });
 
-    // ✅ 상단 메인 배너 슬라이드쇼 텍스트 + 이미지 (페이드 방식)
+    // 슬라이드쇼
     const slideTexts = [
         "산업보건 Total Service 제공이 가능한 기업",
         "기업 맞춤형 안전보건 컨설팅 서비스",
@@ -34,25 +34,21 @@ document.addEventListener("DOMContentLoaded", () => {
     }
     showSlides();
 
-    // ✅ 포스터 슬라이드 (가로 이동 캐러셀)
-    const posterCarousel = document.getElementById("poster-carousel");
-    const posterCount = posterCarousel.children.length;
-    let posterIndex = 0;
-
+    // 포스터 슬라이드
+    const posterCarousel = document.getElementById('poster-carousel');
+    let posterOffset = 0;
+    const posterSlides = document.querySelectorAll('.poster-slide');
     setInterval(() => {
-        posterIndex = (posterIndex + 1) % posterCount;
-        const offset = posterIndex * (300 + 20); // 이미지 너비 + margin
-        posterCarousel.style.transform = `translateX(-${offset}px)`;
+        posterOffset = (posterOffset + 1) % posterSlides.length;
+        posterCarousel.style.transform = `translateX(-${posterOffset * 320}px)`;
     }, 3000);
 
-    // ✅ 기관 로고 슬라이드 (가로 이동 캐러셀)
-    const orgCarousel = document.getElementById("org-carousel");
-    const orgCount = orgCarousel.children.length;
-    let orgIndex = 0;
-
+    // 기관 로고 슬라이드
+    const orgCarousel = document.getElementById('org-carousel');
+    let orgOffset = 0;
+    const orgSlides = document.querySelectorAll('.org-slide');
     setInterval(() => {
-        orgIndex = (orgIndex + 1) % orgCount;
-        const offset = orgIndex * (300 + 20); // 로고 간 거리
-        orgCarousel.style.transform = `translateX(-${offset}px)`;
+        orgOffset = (orgOffset + 1) % orgSlides.length;
+        orgCarousel.style.transform = `translateX(-${orgOffset * 320}px)`;
     }, 4000);
 });
