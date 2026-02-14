@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "main", "dev" ] # main 또는 dev 브랜치 푸시 시 트리거
+    branches: [ "dev" ] # main 또는 dev 브랜치 푸시 시 트리거
 
 jobs:
   build-and-push:
