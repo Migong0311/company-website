@@ -1,6 +1,8 @@
 services:
   # [1] 백엔드 서비스 (Spring Boot)
   backend:
+    # GitHub Container Registry 주소를 추가합니다.
+    image: ghcr.io/migong0311/sm-osh-company-website-backend:latest
     build: ./backend
     container_name: safety-backend
     ports:
@@ -17,6 +19,8 @@ services:
 
   # [2] 프론트엔드 서비스 (Vue.js + Nginx)
   frontend:
+    # GitHub Container Registry 주소를 추가합니다.
+    image: ghcr.io/migong0311/sm-osh-company-website-frontend:latest
     build: ./frontend
     container_name: safety-frontend
     networks:
@@ -53,7 +57,6 @@ services:
     networks:
       - app-network
 
-# ▼▼▼ 여기가 중요합니다! (파일 맨 아래에 꼭 있어야 함) ▼▼▼
 volumes:
   mysql_data:
 
