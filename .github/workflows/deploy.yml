@@ -4,6 +4,10 @@ on:
   push:
     branches: [ "dev" ] # main 또는 dev 브랜치 푸시 시 트리거
 
+permissions:
+  contents: read
+  packages: write
+
 jobs:
   build-and-push:
     runs-on: ubuntu-latest
