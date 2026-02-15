@@ -81,10 +81,14 @@ export const useReferenceStore = defineStore('reference', () => {
     return `/api/references/files/${fileId}/download`
   }
 
+  function getImageUrl(imageId) {
+    return `/api/references/images/${imageId}`
+  }
+
   return {
     categories, references, totalPages, totalElements, currentPage,
     fetchCategories, createCategory, updateCategory, deleteCategory,
     fetchReferences, searchReferences, fetchByCategory, fetchReference, createReference, deleteReference,
-    getDownloadUrl, getThumbnailUrl, getFileDownloadUrl
+    getDownloadUrl, getThumbnailUrl, getFileDownloadUrl, getImageUrl
   }
 })

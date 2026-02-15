@@ -2,6 +2,7 @@ package com.smcompany.backend.dto.response;
 
 import com.smcompany.backend.entity.Reference;
 import com.smcompany.backend.entity.ReferenceFile;
+import com.smcompany.backend.entity.ReferenceImage;
 import lombok.Builder;
 import lombok.Getter;
 
@@ -21,10 +22,19 @@ public class ReferenceResponse {
     private Integer downloadCount;
     private LocalDateTime createdAt;
     private List<FileInfo> files;
+    private List<ImageInfo> images;
 
     @Getter
     @Builder
     public static class FileInfo {
+        private Long id;
+        private String fileName;
+        private Integer sortOrder;
+    }
+
+    @Getter
+    @Builder
+    public static class ImageInfo {
         private Long id;
         private String fileName;
         private Integer sortOrder;
@@ -41,6 +51,16 @@ public class ReferenceResponse {
                     .toList()
                 : List.of();
 
+        List<ImageInfo> imageInfos = reference.getImages() != null
+                ? reference.getImages().stream()
+                    .map(img -> ImageInfo.builder()
+                            .id(img.getId())
+                            .fileName(img.getFileName())
+                            .sortOrder(img.getSortOrder())
+                            .build())
+                    .toList()
+                : List.of();
+
         return ReferenceResponse.builder()
                 .id(reference.getId())
                 .categoryName(reference.getCategory() != null ? reference.getCategory().getName() : null)
@@ -52,6 +72,7 @@ public class ReferenceResponse {
                 .downloadCount(reference.getDownloadCount())
                 .createdAt(reference.getCreatedAt())
                 .files(fileInfos)
+                .images(imageInfos)
                 .build();
     }
 }

@@ -55,9 +55,13 @@ public class ReferenceController {
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
             @RequestParam("files") List<MultipartFile> files,
-            @RequestParam(value = "thumbnail", required = false) MultipartFile thumbnail) {
+            @RequestParam(value = "thumbnail", required = false) MultipartFile thumbnail,
+            @RequestParam(value = "images", required = false) List<MultipartFile> images) {
 
         if (files.size() > 5) {
+            return ResponseEntity.badRequest().build();
+        }
+        if (images != null && images.size() > 5) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -66,7 +70,7 @@ public class ReferenceController {
         request.setTitle(title);
         request.setDescription(description);
 
-        return ResponseEntity.ok(referenceService.createReference(request, files, thumbnail));
+        return ResponseEntity.ok(referenceService.createReference(request, files, thumbnail, images));
     }
 
     @GetMapping("/{id}/thumbnail")
@@ -77,6 +81,20 @@ public class ReferenceController {
         }
         Resource resource = referenceService.loadThumbnail(ref.getThumbnailPath());
         String ext = ref.getThumbnailPath().substring(ref.getThumbnailPath().lastIndexOf('.') + 1).toLowerCase();
+        MediaType mediaType = switch (ext) {
+            case "png" -> MediaType.IMAGE_PNG;
+            case "gif" -> MediaType.IMAGE_GIF;
+            case "webp" -> MediaType.parseMediaType("image/webp");
+            default -> MediaType.IMAGE_JPEG;
+        };
+        return ResponseEntity.ok().contentType(mediaType).body(resource);
+    }
+
+    @GetMapping("/images/{imageId}")
+    public ResponseEntity<Resource> getGalleryImage(@PathVariable Long imageId) {
+        Resource resource = referenceService.loadGalleryImage(imageId);
+        String filePath = referenceService.getGalleryImageFileName(imageId);
+        String ext = filePath.substring(filePath.lastIndexOf('.') + 1).toLowerCase();
         MediaType mediaType = switch (ext) {
             case "png" -> MediaType.IMAGE_PNG;
             case "gif" -> MediaType.IMAGE_GIF;

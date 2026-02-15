@@ -55,6 +55,11 @@ public class Reference {
     @OrderBy("sortOrder ASC")
     private List<ReferenceFile> files = new ArrayList<>();
 
+    /** 갤러리 이미지 목록 (최대 5장) */
+    @OneToMany(mappedBy = "reference", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<ReferenceImage> images = new ArrayList<>();
+
     /** 다운로드 횟수 (기본값 0) */
     @Column(name = "download_count")
     private Integer downloadCount = 0;

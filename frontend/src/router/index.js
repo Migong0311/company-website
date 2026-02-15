@@ -34,6 +34,11 @@ const router = createRouter({
       name: 'references',
       component: () => import('@/views/ReferenceListView.vue'),
     },
+    {
+      path: '/references/:id',
+      name: 'reference-detail',
+      component: () => import('@/views/ReferenceDetailView.vue'),
+    },
   ],
   scrollBehavior(to, from, savedPosition) {
     if (to.hash) {

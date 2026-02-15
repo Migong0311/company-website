@@ -64,7 +64,7 @@
       </div>
 
       <div v-else class="ref-grid">
-        <div v-for="item in references" :key="item.id" class="ref-item" @click="openDetail(item)">
+        <div v-for="item in references" :key="item.id" class="ref-item" @click="goToDetail(item.id)">
           <div class="ref-poster">
             <img
               v-if="item.thumbnailPath"
@@ -115,10 +115,13 @@
 
 <script setup>
 import { ref, onMounted, onUnmounted } from 'vue'
+import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useReferenceStore } from '@/stores/reference'
 import { useAuthStore } from '@/stores/auth'
 import Swal from 'sweetalert2'
+
+const router = useRouter()
 
 const refStore = useReferenceStore()
 const authStore = useAuthStore()
@@ -181,10 +184,6 @@ function handleSearch() {
   }
 }
 
-function getFileCount(item) {
-  return 1 + (item.files ? item.files.length : 0)
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
@@ -215,52 +214,8 @@ function handleThumbError(e) {
   e.target.parentElement.classList.add('thumb-fallback')
 }
 
-/* 자료 상세 모달 */
-function openDetail(item) {
-  const thumbHtml = item.thumbnailPath
-    ? `<div style="margin-bottom:16px;text-align:center;"><img src="${refStore.getThumbnailUrl(item.id)}" style="max-width:100%;max-height:450px;border-radius:8px;object-fit:contain;border:1px solid #eee;" /></div>`
-    : ''
-
-  // 파일 목록 생성
-  let filesHtml = `<div style="text-align:left;margin-top:12px;">
-    <p style="font-weight:600;font-size:0.85rem;margin-bottom:8px;"><i class="fas fa-paperclip"></i> 첨부파일 (${getFileCount(item)}개)</p>
-    <div style="display:flex;flex-direction:column;gap:6px;">`
-
-  // 메인 파일
-  filesHtml += `<a href="${refStore.getDownloadUrl(item.id)}" download style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fa;border-radius:6px;text-decoration:none;color:#333;font-size:0.85rem;transition:background 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">
-    <i class="${getFileIcon(item.fileName)}" style="color:#1a3a5c;"></i>
-    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.fileName}</span>
-    <i class="fas fa-download" style="color:#e8a020;"></i>
-  </a>`
-
-  // 추가 파일들
-  if (item.files && item.files.length > 0) {
-    item.files.forEach(f => {
-      filesHtml += `<a href="${refStore.getFileDownloadUrl(f.id)}" download style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fa;border-radius:6px;text-decoration:none;color:#333;font-size:0.85rem;transition:background 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">
-        <i class="${getFileIcon(f.fileName)}" style="color:#1a3a5c;"></i>
-        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.fileName}</span>
-        <i class="fas fa-download" style="color:#e8a020;"></i>
-      </a>`
-    })
-  }
-  filesHtml += '</div></div>'
-
-  Swal.fire({
-    title: item.title,
-    width: 620,
-    html: `
-      ${thumbHtml}
-      ${item.description ? `<p style="text-align:left;color:#555;margin-bottom:12px;line-height:1.6;">${item.description}</p>` : ''}
-      <div style="text-align:left;font-size:0.85rem;color:#888;margin-bottom:8px;">
-        <p><i class="fas fa-folder" style="width:18px;"></i> ${item.categoryName || '미분류'}</p>
-        <p><i class="fas fa-download" style="width:18px;"></i> 다운로드 ${item.downloadCount}회</p>
-        <p><i class="fas fa-calendar" style="width:18px;"></i> ${formatDate(item.createdAt)}</p>
-      </div>
-      ${filesHtml}
-    `,
-    showConfirmButton: false,
-    showCloseButton: true,
-  })
+function goToDetail(id) {
+  router.push(`/references/${id}`)
 }
 
 /* 카테고리 관리 모달 */
@@ -329,6 +284,8 @@ async function openUploadModal() {
 
   const catOptions = categories.value.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
 
+  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
+
   const fileInputsHtml = [1,2,3,4,5].map(i => `
     <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
       <span style="min-width:60px;font-size:0.82rem;color:#555;font-weight:500;">파일 ${i}</span>
@@ -336,9 +293,16 @@ async function openUploadModal() {
     </div>
   `).join('')
 
+  const imageInputsHtml = [1,2,3,4,5].map(i => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="min-width:70px;font-size:0.82rem;color:#555;font-weight:500;">이미지 ${i}</span>
+      <input id="swal-ref-img-${i}" type="file" accept="image/*" style="font-size:0.82rem;flex:1;">
+    </div>
+  `).join('')
+
   const { value: formValues } = await Swal.fire({
     title: '자료 업로드',
-    width: 580,
+    width: 620,
     html: `
       <div style="text-align:left;">
         <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">카테고리</label>
@@ -352,13 +316,16 @@ async function openUploadModal() {
         <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">설명 <small style="color:#999">(선택)</small></label>
         <textarea id="swal-ref-desc" class="swal2-textarea" placeholder="자료에 대한 설명" style="margin:0 0 16px 0;width:100%;box-sizing:border-box;min-height:80px;"></textarea>
 
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:8px;">첨부파일 <small style="color:#e8a020">(최대 5개, 각 10MB)</small></label>
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:8px;">첨부파일 <small style="color:#e8a020">(최대 5개, 각 10MB 이하)</small></label>
         ${fileInputsHtml}
         <p style="color:#999;font-size:0.75rem;margin-bottom:16px;">PDF, 문서, 이미지, 압축파일 등 / 파일 1은 필수</p>
 
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">썸네일 이미지 <small style="color:#999">(선택, 1개)</small></label>
-        <input id="swal-ref-thumb" type="file" accept="image/*" style="margin-bottom:4px;font-size:0.85rem;">
-        <p style="color:#e8a020;font-size:0.78rem;"><i class="fas fa-info-circle"></i> 이미지 파일만 업로드 (JPG, PNG, GIF, WebP)</p>
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">썸네일 이미지 <small style="color:#999">(선택, 목록에 표시될 대표 이미지 1개)</small></label>
+        <input id="swal-ref-thumb" type="file" accept="image/*" style="margin-bottom:16px;font-size:0.85rem;">
+
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:8px;">갤러리 이미지 <small style="color:#e8a020">(선택, 최대 5장, 각 10MB 이하)</small></label>
+        ${imageInputsHtml}
+        <p style="color:#999;font-size:0.75rem;"><i class="fas fa-info-circle"></i> 상세 페이지에서 표시될 관련 사진 (JPG, PNG, GIF, WebP)</p>
       </div>
     `,
     showCancelButton: true,
@@ -376,7 +343,7 @@ async function openUploadModal() {
         return false
       }
 
-      // 5개 개별 파일 입력란에서 파일 수집
+      // 첨부파일 수집
       const files = []
       for (let i = 1; i <= 5; i++) {
         const input = document.getElementById(`swal-ref-file-${i}`)
@@ -386,18 +353,46 @@ async function openUploadModal() {
       }
 
       if (files.length === 0) {
-        Swal.showValidationMessage('파일을 최소 1개 선택해주세요.')
+        Swal.showValidationMessage('첨부파일을 최소 1개 선택해주세요.')
         return false
       }
+
+      // 첨부파일 10MB 검증
       for (const f of files) {
-        if (f.size > 10 * 1024 * 1024) {
-          Swal.showValidationMessage(`파일 "${f.name}"이(가) 10MB를 초과합니다.`)
+        if (f.size > MAX_FILE_SIZE) {
+          Swal.showValidationMessage(`첨부파일 "${f.name}"의 용량이 10MB를 초과합니다. 10MB 미만의 자료만 첨부 가능합니다.`)
           return false
         }
       }
-      if (thumbnail && !thumbnail.type.startsWith('image/')) {
-        Swal.showValidationMessage('썸네일은 이미지 파일만 가능합니다.')
-        return false
+
+      // 썸네일 검증
+      if (thumbnail) {
+        if (!thumbnail.type.startsWith('image/')) {
+          Swal.showValidationMessage('썸네일은 이미지 파일만 가능합니다.')
+          return false
+        }
+        if (thumbnail.size > MAX_FILE_SIZE) {
+          Swal.showValidationMessage(`썸네일 "${thumbnail.name}"의 용량이 10MB를 초과합니다. 10MB 미만의 자료만 첨부 가능합니다.`)
+          return false
+        }
+      }
+
+      // 갤러리 이미지 수집 및 검증
+      const images = []
+      for (let i = 1; i <= 5; i++) {
+        const input = document.getElementById(`swal-ref-img-${i}`)
+        if (input.files[0]) {
+          const img = input.files[0]
+          if (!img.type.startsWith('image/')) {
+            Swal.showValidationMessage(`갤러리 이미지 ${i}번은 이미지 파일만 가능합니다.`)
+            return false
+          }
+          if (img.size > MAX_FILE_SIZE) {
+            Swal.showValidationMessage(`갤러리 이미지 "${img.name}"의 용량이 10MB를 초과합니다. 10MB 미만의 자료만 첨부 가능합니다.`)
+            return false
+          }
+          images.push(img)
+        }
       }
 
       const formData = new FormData()
@@ -408,6 +403,9 @@ async function openUploadModal() {
         formData.append('files', f)
       }
       if (thumbnail) formData.append('thumbnail', thumbnail)
+      for (const img of images) {
+        formData.append('images', img)
+      }
       return formData
     }
   })
