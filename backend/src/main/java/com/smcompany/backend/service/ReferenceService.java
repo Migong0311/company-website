@@ -7,7 +7,6 @@ import com.smcompany.backend.entity.ReferenceCategory;
 import com.smcompany.backend.entity.ReferenceFile;
 import com.smcompany.backend.entity.ReferenceImage;
 import com.smcompany.backend.repository.ReferenceCategoryRepository;
-import com.smcompany.backend.repository.ReferenceFileRepository;
 import com.smcompany.backend.repository.ReferenceImageRepository;
 import com.smcompany.backend.repository.ReferenceRepository;
 import lombok.RequiredArgsConstructor;
@@ -27,7 +26,6 @@ public class ReferenceService {
 
     private final ReferenceRepository referenceRepository;
     private final ReferenceCategoryRepository categoryRepository;
-    private final ReferenceFileRepository referenceFileRepository;
     private final ReferenceImageRepository referenceImageRepository;
     private final FileStorageService fileStorageService;
 
@@ -53,14 +51,12 @@ public class ReferenceService {
     }
 
     @Transactional
-    public ReferenceResponse createReference(ReferenceRequest request, List<MultipartFile> files,
+    public ReferenceResponse createReference(ReferenceRequest request, MultipartFile file,
                                               MultipartFile thumbnail, List<MultipartFile> images) {
         ReferenceCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("카테고리를 찾을 수 없습니다."));
 
-        // 첫 번째 파일을 메인 파일로 저장
-        MultipartFile mainFile = files.get(0);
-        String storedFileName = fileStorageService.storeFile(mainFile);
+        String storedFileName = fileStorageService.storeFile(file);
         String thumbnailName = null;
         if (thumbnail != null && !thumbnail.isEmpty()) {
             thumbnailName = fileStorageService.storeThumbnail(thumbnail);
@@ -70,27 +66,14 @@ public class ReferenceService {
                 .category(category)
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .fileName(mainFile.getOriginalFilename())
+                .fileName(file.getOriginalFilename())
                 .filePath(storedFileName)
                 .thumbnailPath(thumbnailName)
                 .build();
 
         Reference saved = referenceRepository.save(reference);
 
-        // 추가 파일들을 ReferenceFile로 저장
-        for (int i = 1; i < files.size(); i++) {
-            MultipartFile f = files.get(i);
-            String stored = fileStorageService.storeFile(f);
-            ReferenceFile refFile = ReferenceFile.builder()
-                    .reference(saved)
-                    .fileName(f.getOriginalFilename())
-                    .filePath(stored)
-                    .sortOrder(i)
-                    .build();
-            referenceFileRepository.save(refFile);
-        }
-
-        // 갤러리 이미지 저장
+        // 갤러리 이미지 저장 (최대 3장)
         if (images != null) {
             for (int i = 0; i < images.size(); i++) {
                 MultipartFile img = images.get(i);
@@ -116,20 +99,6 @@ public class ReferenceService {
                 .orElseThrow(() -> new RuntimeException("자료를 찾을 수 없습니다."));
         reference.incrementDownloadCount();
         return fileStorageService.loadFileAsResource(reference.getFilePath());
-    }
-
-    @Transactional
-    public Resource downloadAttachedFile(Long fileId) {
-        ReferenceFile refFile = referenceFileRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다."));
-        refFile.getReference().incrementDownloadCount();
-        return fileStorageService.loadFileAsResource(refFile.getFilePath());
-    }
-
-    public String getAttachedFileName(Long fileId) {
-        ReferenceFile refFile = referenceFileRepository.findById(fileId)
-                .orElseThrow(() -> new RuntimeException("파일을 찾을 수 없습니다."));
-        return refFile.getFileName();
     }
 
     public Resource loadThumbnail(String thumbnailPath) {

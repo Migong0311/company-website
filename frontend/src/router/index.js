@@ -35,6 +35,11 @@ const router = createRouter({
       component: () => import('@/views/ReferenceListView.vue'),
     },
     {
+      path: '/references/write',
+      name: 'reference-write',
+      component: () => import('@/views/ReferenceWriteView.vue'),
+    },
+    {
       path: '/references/:id',
       name: 'reference-detail',
       component: () => import('@/views/ReferenceDetailView.vue'),

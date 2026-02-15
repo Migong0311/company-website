@@ -47,9 +47,9 @@
             <button class="btn-outline btn-sm" @click="openCategoryModal">
               <i class="fas fa-folder-plus"></i> 카테고리
             </button>
-            <button class="btn-primary btn-sm" @click="openUploadModal">
+            <router-link to="/references/write" class="btn-primary btn-sm">
               <i class="fas fa-upload"></i> 업로드
-            </button>
+            </router-link>
           </template>
         </div>
       </div>
@@ -184,12 +184,6 @@ function handleSearch() {
   }
 }
 
-function formatDate(dateStr) {
-  if (!dateStr) return ''
-  const d = new Date(dateStr)
-  return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
-}
-
 function getFileIcon(fileName) {
   if (!fileName) return 'fas fa-file'
   const ext = fileName.split('.').pop().toLowerCase()
@@ -272,156 +266,6 @@ async function openCategoryModal() {
     Swal.fire({ icon: 'success', title: '추가 완료', timer: 1500, showConfirmButton: false })
   } catch {
     Swal.fire({ icon: 'error', title: '오류', text: '카테고리 추가에 실패했습니다.' })
-  }
-}
-
-/* 자료 업로드 모달 (5개 개별 파일 입력란) */
-async function openUploadModal() {
-  if (categories.value.length === 0) {
-    Swal.fire({ icon: 'warning', title: '카테고리 필요', text: '먼저 카테고리를 추가해주세요.' })
-    return
-  }
-
-  const catOptions = categories.value.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
-
-  const MAX_FILE_SIZE = 10 * 1024 * 1024 // 10MB
-
-  const fileInputsHtml = [1,2,3,4,5].map(i => `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <span style="min-width:60px;font-size:0.82rem;color:#555;font-weight:500;">파일 ${i}</span>
-      <input id="swal-ref-file-${i}" type="file" style="font-size:0.82rem;flex:1;">
-    </div>
-  `).join('')
-
-  const imageInputsHtml = [1,2,3,4,5].map(i => `
-    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
-      <span style="min-width:70px;font-size:0.82rem;color:#555;font-weight:500;">이미지 ${i}</span>
-      <input id="swal-ref-img-${i}" type="file" accept="image/*" style="font-size:0.82rem;flex:1;">
-    </div>
-  `).join('')
-
-  const { value: formValues } = await Swal.fire({
-    title: '자료 업로드',
-    width: 620,
-    html: `
-      <div style="text-align:left;">
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">카테고리</label>
-        <select id="swal-ref-cat" class="swal2-select" style="width:100%;padding:10px;border:1px solid #d9d9d9;border-radius:4px;margin-bottom:16px;font-size:0.9rem;">
-          ${catOptions}
-        </select>
-
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">제목</label>
-        <input id="swal-ref-title" class="swal2-input" placeholder="자료 제목" style="margin:0 0 16px 0;width:100%;box-sizing:border-box;">
-
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">설명 <small style="color:#999">(선택)</small></label>
-        <textarea id="swal-ref-desc" class="swal2-textarea" placeholder="자료에 대한 설명" style="margin:0 0 16px 0;width:100%;box-sizing:border-box;min-height:80px;"></textarea>
-
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:8px;">첨부파일 <small style="color:#e8a020">(최대 5개, 각 10MB 이하)</small></label>
-        ${fileInputsHtml}
-        <p style="color:#999;font-size:0.75rem;margin-bottom:16px;">PDF, 문서, 이미지, 압축파일 등 / 파일 1은 필수</p>
-
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">썸네일 이미지 <small style="color:#999">(선택, 목록에 표시될 대표 이미지 1개)</small></label>
-        <input id="swal-ref-thumb" type="file" accept="image/*" style="margin-bottom:16px;font-size:0.85rem;">
-
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:8px;">갤러리 이미지 <small style="color:#e8a020">(선택, 최대 5장, 각 10MB 이하)</small></label>
-        ${imageInputsHtml}
-        <p style="color:#999;font-size:0.75rem;"><i class="fas fa-info-circle"></i> 상세 페이지에서 표시될 관련 사진 (JPG, PNG, GIF, WebP)</p>
-      </div>
-    `,
-    showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-upload"></i> 업로드',
-    cancelButtonText: '취소',
-    confirmButtonColor: '#1a3a5c',
-    preConfirm: () => {
-      const categoryId = document.getElementById('swal-ref-cat').value
-      const title = document.getElementById('swal-ref-title').value
-      const description = document.getElementById('swal-ref-desc').value
-      const thumbnail = document.getElementById('swal-ref-thumb').files[0]
-
-      if (!title) {
-        Swal.showValidationMessage('제목을 입력해주세요.')
-        return false
-      }
-
-      // 첨부파일 수집
-      const files = []
-      for (let i = 1; i <= 5; i++) {
-        const input = document.getElementById(`swal-ref-file-${i}`)
-        if (input.files[0]) {
-          files.push(input.files[0])
-        }
-      }
-
-      if (files.length === 0) {
-        Swal.showValidationMessage('첨부파일을 최소 1개 선택해주세요.')
-        return false
-      }
-
-      // 첨부파일 10MB 검증
-      for (const f of files) {
-        if (f.size > MAX_FILE_SIZE) {
-          Swal.showValidationMessage(`첨부파일 "${f.name}"의 용량이 10MB를 초과합니다. 10MB 미만의 자료만 첨부 가능합니다.`)
-          return false
-        }
-      }
-
-      // 썸네일 검증
-      if (thumbnail) {
-        if (!thumbnail.type.startsWith('image/')) {
-          Swal.showValidationMessage('썸네일은 이미지 파일만 가능합니다.')
-          return false
-        }
-        if (thumbnail.size > MAX_FILE_SIZE) {
-          Swal.showValidationMessage(`썸네일 "${thumbnail.name}"의 용량이 10MB를 초과합니다. 10MB 미만의 자료만 첨부 가능합니다.`)
-          return false
-        }
-      }
-
-      // 갤러리 이미지 수집 및 검증
-      const images = []
-      for (let i = 1; i <= 5; i++) {
-        const input = document.getElementById(`swal-ref-img-${i}`)
-        if (input.files[0]) {
-          const img = input.files[0]
-          if (!img.type.startsWith('image/')) {
-            Swal.showValidationMessage(`갤러리 이미지 ${i}번은 이미지 파일만 가능합니다.`)
-            return false
-          }
-          if (img.size > MAX_FILE_SIZE) {
-            Swal.showValidationMessage(`갤러리 이미지 "${img.name}"의 용량이 10MB를 초과합니다. 10MB 미만의 자료만 첨부 가능합니다.`)
-            return false
-          }
-          images.push(img)
-        }
-      }
-
-      const formData = new FormData()
-      formData.append('categoryId', categoryId)
-      formData.append('title', title)
-      if (description) formData.append('description', description)
-      for (const f of files) {
-        formData.append('files', f)
-      }
-      if (thumbnail) formData.append('thumbnail', thumbnail)
-      for (const img of images) {
-        formData.append('images', img)
-      }
-      return formData
-    }
-  })
-
-  if (!formValues) return
-
-  try {
-    await refStore.createReference(formValues)
-    if (selectedCategory.value) {
-      await refStore.fetchByCategory(selectedCategory.value)
-    } else {
-      await refStore.fetchReferences()
-    }
-    Swal.fire({ icon: 'success', title: '업로드 완료', text: '자료가 등록되었습니다.', timer: 1500, showConfirmButton: false })
-  } catch {
-    Swal.fire({ icon: 'error', title: '업로드 실패', text: '파일 업로드에 실패했습니다.' })
   }
 }
 
@@ -602,6 +446,7 @@ async function handleDelete(id) {
   font-size: 0.9rem;
   font-weight: 500;
   cursor: pointer;
+  text-decoration: none;
   transition: var(--transition);
 }
 

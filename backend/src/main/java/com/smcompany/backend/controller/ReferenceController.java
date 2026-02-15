@@ -54,14 +54,11 @@ public class ReferenceController {
             @RequestParam("categoryId") Long categoryId,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam("files") List<MultipartFile> files,
+            @RequestParam("file") MultipartFile file,
             @RequestParam(value = "thumbnail", required = false) MultipartFile thumbnail,
             @RequestParam(value = "images", required = false) List<MultipartFile> images) {
 
-        if (files.size() > 5) {
-            return ResponseEntity.badRequest().build();
-        }
-        if (images != null && images.size() > 5) {
+        if (images != null && images.size() > 3) {
             return ResponseEntity.badRequest().build();
         }
 
@@ -70,7 +67,7 @@ public class ReferenceController {
         request.setTitle(title);
         request.setDescription(description);
 
-        return ResponseEntity.ok(referenceService.createReference(request, files, thumbnail, images));
+        return ResponseEntity.ok(referenceService.createReference(request, file, thumbnail, images));
     }
 
     @GetMapping("/{id}/thumbnail")
@@ -108,20 +105,6 @@ public class ReferenceController {
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         Resource resource = referenceService.downloadFile(id);
         String fileName = referenceService.getOriginalFileName(id);
-        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
-                .replace("+", "%20");
-
-        return ResponseEntity.ok()
-                .contentType(MediaType.APPLICATION_OCTET_STREAM)
-                .header(HttpHeaders.CONTENT_DISPOSITION,
-                        "attachment; filename*=UTF-8''" + encodedFileName)
-                .body(resource);
-    }
-
-    @GetMapping("/files/{fileId}/download")
-    public ResponseEntity<Resource> downloadAttachedFile(@PathVariable Long fileId) {
-        Resource resource = referenceService.downloadAttachedFile(fileId);
-        String fileName = referenceService.getAttachedFileName(fileId);
         String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
                 .replace("+", "%20");
 
