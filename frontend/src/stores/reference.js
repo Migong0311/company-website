@@ -60,7 +60,7 @@ export const useReferenceStore = defineStore('reference', () => {
 
   async function createReference(formData) {
     const { data } = await api.post('/references', formData, {
-      headers: { 'Content-Type': 'multipart/form-data' }
+      headers: { 'Content-Type': undefined }
     })
     return data
   }
