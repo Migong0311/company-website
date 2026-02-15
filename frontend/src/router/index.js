@@ -9,6 +9,31 @@ const router = createRouter({
       name: 'home',
       component: HomeView,
     },
+    {
+      path: '/qna',
+      name: 'qna-list',
+      component: () => import('@/views/QnaListView.vue'),
+    },
+    {
+      path: '/qna/write',
+      name: 'qna-write',
+      component: () => import('@/views/QnaWriteView.vue'),
+    },
+    {
+      path: '/qna/:id',
+      name: 'qna-detail',
+      component: () => import('@/views/QnaDetailView.vue'),
+    },
+    {
+      path: '/qna/:id/edit',
+      name: 'qna-edit',
+      component: () => import('@/views/QnaWriteView.vue'),
+    },
+    {
+      path: '/references',
+      name: 'references',
+      component: () => import('@/views/ReferenceListView.vue'),
+    },
   ],
   scrollBehavior(to, from, savedPosition) {
     if (to.hash) {

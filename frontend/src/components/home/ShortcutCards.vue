@@ -1,18 +1,18 @@
 <script setup>
 const shortcuts = [
-    { icon: 'fas fa-building', title: '회사소개', subtitle: 'Company Introduction', href: '#about' },
-    { icon: 'fas fa-comments', title: 'Q&A 게시판', subtitle: 'Question & Answer', href: '#qna' },
-    { icon: 'fas fa-folder-open', title: '자료실', subtitle: 'Reference Room', href: '#reference' },
+    { icon: 'fas fa-building', title: '회사소개', subtitle: 'Company Introduction', to: '/#about' },
+    { icon: 'fas fa-comments', title: 'Q&A 게시판', subtitle: 'Question & Answer', to: '/qna' },
+    { icon: 'fas fa-folder-open', title: '자료실', subtitle: 'Reference Room', to: '/references' },
 ]
 </script>
 
 <template>
     <section class="shortcut-section">
         <div class="shortcut-cards">
-            <a
+            <router-link
                 v-for="(item, index) in shortcuts"
                 :key="index"
-                :href="item.href"
+                :to="item.to"
                 class="shortcut-card"
                 v-scroll-animate
             >
@@ -24,7 +24,7 @@ const shortcuts = [
                     <span>{{ item.subtitle }}</span>
                 </div>
                 <i class="fas fa-arrow-right shortcut-arrow"></i>
-            </a>
+            </router-link>
         </div>
     </section>
 </template>
