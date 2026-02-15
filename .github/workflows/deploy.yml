@@ -1,0 +1,86 @@
+name: CI/CD Pipeline
+
+on:
+  push:
+    branches: [ "main" ]
+
+permissions:
+  contents: read
+  packages: write
+
+jobs:
+  build-and-push:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Checkout Code
+        uses: actions/checkout@v4
+
+      # 1. Backend Build (Java 17)
+      - name: Set up JDK 17
+        uses: actions/setup-java@v4
+        with:
+          java-version: '17'
+          distribution: 'temurin'
+          cache: gradle
+
+      - name: Build Backend
+        run: |
+          cd backend
+          chmod +x gradlew
+          ./gradlew bootJar -x test
+
+      # 2. Docker Login & Push
+      - name: Log in to GHCR
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Build and Push Docker Images
+        run: |
+          docker compose build
+          docker compose push
+
+  deploy:
+    needs: build-and-push
+    runs-on: ubuntu-latest
+    steps:
+      - name: Deploy to Server via SSH
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.HOST }}
+          username: ${{ secrets.USERNAME }}
+          key: ${{ secrets.SSH_KEY }}
+          # 타임아웃 방지를 위해 넉넉하게 설정
+          timeout: 60s
+          script: |
+            cd ~/workspace/sm-osh-company-website
+            git pull origin main
+
+            # [중요] GitHub Secrets 내용을 .env 파일로 생성
+            # (기존 파일이 있어도 덮어씁니다)
+            cat > .env <<EOF
+            MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+            MYSQL_USER=${{ secrets.MYSQL_USERNAME }}
+            MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+            MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+            APP_ADMIN_USERNAME=${{ secrets.APP_ADMIN_USERNAME }}
+            APP_ADMIN_PASSWORD=${{ secrets.APP_ADMIN_PASSWORD }}
+            APP_ADMIN_NAME=${{ secrets.APP_ADMIN_NAME }}
+            EOF
+
+            # 배포 서버 전용 override: MySQL을 127.0.0.1에만 노출 (SSH 터널용)
+            cat > docker-compose.override.yml << 'OVERRIDE'
+            services:
+              db:
+                ports:
+                  - "127.0.0.1:3306:3306"
+            OVERRIDE
+
+            # 최신 이미지 다운로드 및 컨테이너 재생성
+            docker compose pull
+            docker compose up -d
+            
+            # 미사용 이미지 정리 (용량 확보)
+            docker image prune -f
