@@ -61,8 +61,9 @@
         <div class="comment-form-card">
           <h4 class="comment-form-title">댓글 작성</h4>
           <div class="comment-form-row">
-            <input v-model="commentForm.authorName" type="text" placeholder="이름" class="input-field input-sm" />
-            <input v-model="commentForm.password" type="password" placeholder="비밀번호" class="input-field input-sm" />
+            <input v-model="commentForm.authorName" type="text" placeholder="이름" class="input-field input-sm" :disabled="isAdmin" />
+            <input v-if="!isAdmin" v-model="commentForm.password" type="password" placeholder="비밀번호" class="input-field input-sm" />
+            <span v-else class="admin-mode-badge"><i class="fas fa-shield-alt"></i> 관리자 모드</span>
           </div>
           <textarea v-model="commentForm.content" placeholder="댓글을 입력하세요." class="input-field textarea-field" rows="3"></textarea>
           <div class="comment-form-actions">
@@ -77,7 +78,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, computed, onMounted, watch } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useQnaStore } from '@/stores/qna'
@@ -90,12 +91,19 @@ const router = useRouter()
 const qnaStore = useQnaStore()
 const authStore = useAuthStore()
 const { currentPost: post, comments } = storeToRefs(qnaStore)
+const { isLoggedIn: isAdmin, adminName } = storeToRefs(authStore)
 
 const commentForm = ref({
   authorName: '',
   password: '',
   content: ''
 })
+
+// 관리자 로그인 시 이름 자동 채움
+watch(isAdmin, (val) => {
+  if (val) commentForm.value.authorName = '관리자'
+  else commentForm.value.authorName = ''
+}, { immediate: true })
 
 const formattedContent = computed(() => {
   if (!post.value?.content) return ''
@@ -127,6 +135,12 @@ function formatDate(dateStr) {
 }
 
 async function handleEdit() {
+  if (isAdmin.value) {
+    // 관리자: 비밀번호 없이 바로 수정 페이지로
+    router.push({ path: `/qna/${route.params.id}/edit`, query: { admin: '1' } })
+    return
+  }
+
   const { value: password } = await Swal.fire({
     icon: 'question',
     title: '비밀번호 확인',
@@ -153,10 +167,8 @@ async function handleEdit() {
 }
 
 async function handleDelete() {
-  const isAdmin = authStore.isLoggedIn
-
   let password = ''
-  if (!isAdmin) {
+  if (!isAdmin.value) {
     const result = await Swal.fire({
       icon: 'warning',
       title: '게시글 삭제',
@@ -194,19 +206,23 @@ async function handleDelete() {
 
 async function submitComment(parentId = null) {
   const form = commentForm.value
-  if (!form.authorName || !form.password || !form.content) {
-    Swal.fire({ icon: 'warning', title: '입력 필요', text: '이름, 비밀번호, 내용을 모두 입력해주세요.' })
+  if (!form.authorName || !form.content) {
+    Swal.fire({ icon: 'warning', title: '입력 필요', text: '이름과 내용을 모두 입력해주세요.' })
+    return
+  }
+  if (!isAdmin.value && !form.password) {
+    Swal.fire({ icon: 'warning', title: '입력 필요', text: '비밀번호를 입력해주세요.' })
     return
   }
 
   try {
     await qnaStore.createComment(route.params.id, {
       authorName: form.authorName,
-      password: form.password,
+      password: isAdmin.value ? 'admin' : form.password,
       content: form.content,
       parentId
     })
-    commentForm.value = { authorName: '', password: '', content: '' }
+    commentForm.value = { authorName: isAdmin.value ? '관리자' : '', password: '', content: '' }
     await qnaStore.fetchComments(route.params.id)
     Swal.fire({ icon: 'success', title: '등록 완료', text: '댓글이 등록되었습니다.', timer: 1500, showConfirmButton: false })
   } catch {
@@ -215,12 +231,17 @@ async function submitComment(parentId = null) {
 }
 
 async function openReply(parentId) {
+  // 관리자 모드: 이름 자동입력, 비밀번호 불필요
+  const htmlContent = isAdmin.value
+    ? '<input id="swal-name" class="swal2-input" value="관리자" disabled>' +
+      '<textarea id="swal-content" class="swal2-textarea" placeholder="내용"></textarea>'
+    : '<input id="swal-name" class="swal2-input" placeholder="이름">' +
+      '<input id="swal-pw" class="swal2-input" type="password" placeholder="비밀번호">' +
+      '<textarea id="swal-content" class="swal2-textarea" placeholder="내용"></textarea>'
+
   const { value: formValues } = await Swal.fire({
     title: '답글 작성',
-    html:
-      '<input id="swal-name" class="swal2-input" placeholder="이름">' +
-      '<input id="swal-pw" class="swal2-input" type="password" placeholder="비밀번호">' +
-      '<textarea id="swal-content" class="swal2-textarea" placeholder="내용"></textarea>',
+    html: htmlContent,
     focusConfirm: false,
     showCancelButton: true,
     confirmButtonText: '등록',
@@ -228,9 +249,9 @@ async function openReply(parentId) {
     confirmButtonColor: '#1a3a5c',
     preConfirm: () => {
       const name = document.getElementById('swal-name').value
-      const pw = document.getElementById('swal-pw').value
+      const pw = isAdmin.value ? 'admin' : document.getElementById('swal-pw').value
       const content = document.getElementById('swal-content').value
-      if (!name || !pw || !content) {
+      if (!name || (!isAdmin.value && !pw) || !content) {
         Swal.showValidationMessage('모든 항목을 입력해주세요.')
         return false
       }
@@ -250,6 +271,29 @@ async function openReply(parentId) {
 }
 
 async function openEditComment(commentId) {
+  if (isAdmin.value) {
+    // 관리자: 비밀번호 없이 바로 수정
+    const { value: content } = await Swal.fire({
+      title: '댓글 수정',
+      input: 'textarea',
+      inputPlaceholder: '수정할 내용을 입력하세요.',
+      showCancelButton: true,
+      confirmButtonText: '수정',
+      cancelButtonText: '취소',
+      confirmButtonColor: '#1a3a5c'
+    })
+    if (!content) return
+
+    try {
+      await qnaStore.updateComment(commentId, '', content)
+      await qnaStore.fetchComments(route.params.id)
+      Swal.fire({ icon: 'success', title: '수정 완료', timer: 1500, showConfirmButton: false })
+    } catch {
+      Swal.fire({ icon: 'error', title: '수정 실패', text: '댓글 수정에 실패했습니다.' })
+    }
+    return
+  }
+
   const { value: password } = await Swal.fire({
     icon: 'question',
     title: '비밀번호 확인',
@@ -289,10 +333,8 @@ async function openEditComment(commentId) {
 }
 
 async function handleDeleteComment(commentId) {
-  const isAdmin = authStore.isLoggedIn
-
   let password = ''
-  if (!isAdmin) {
+  if (!isAdmin.value) {
     const result = await Swal.fire({
       icon: 'warning',
       title: '댓글 삭제',
@@ -530,6 +572,7 @@ async function handleDeleteComment(commentId) {
   display: flex;
   gap: 12px;
   margin-bottom: 12px;
+  align-items: center;
 }
 
 .input-field {
@@ -548,6 +591,12 @@ async function handleDeleteComment(commentId) {
   box-shadow: 0 0 0 3px rgba(26, 58, 92, 0.1);
 }
 
+.input-field:disabled {
+  background: var(--bg-light);
+  color: var(--primary);
+  font-weight: 500;
+}
+
 .input-sm {
   max-width: 200px;
 }
@@ -555,6 +604,19 @@ async function handleDeleteComment(commentId) {
 .textarea-field {
   resize: vertical;
   min-height: 80px;
+}
+
+.admin-mode-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 6px;
+  padding: 8px 14px;
+  background: rgba(26, 58, 92, 0.08);
+  color: var(--primary);
+  border-radius: var(--radius-sm);
+  font-size: 0.82rem;
+  font-weight: 500;
+  white-space: nowrap;
 }
 
 .comment-form-actions {

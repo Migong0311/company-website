@@ -57,6 +57,23 @@ public class ReferenceController {
         return ResponseEntity.ok(referenceService.createReference(request, file, thumbnail));
     }
 
+    @GetMapping("/{id}/thumbnail")
+    public ResponseEntity<Resource> getThumbnail(@PathVariable Long id) {
+        ReferenceResponse ref = referenceService.getReference(id);
+        if (ref.getThumbnailPath() == null) {
+            return ResponseEntity.notFound().build();
+        }
+        Resource resource = referenceService.loadThumbnail(ref.getThumbnailPath());
+        String ext = ref.getThumbnailPath().substring(ref.getThumbnailPath().lastIndexOf('.') + 1).toLowerCase();
+        MediaType mediaType = switch (ext) {
+            case "png" -> MediaType.IMAGE_PNG;
+            case "gif" -> MediaType.IMAGE_GIF;
+            case "webp" -> MediaType.parseMediaType("image/webp");
+            default -> MediaType.IMAGE_JPEG;
+        };
+        return ResponseEntity.ok().contentType(mediaType).body(resource);
+    }
+
     @GetMapping("/{id}/download")
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         Resource resource = referenceService.downloadFile(id);

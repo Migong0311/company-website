@@ -31,7 +31,7 @@
       </div>
 
       <!-- 관리자 기능 -->
-      <div class="board-header" v-if="authStore.isLoggedIn">
+      <div class="board-header" v-if="isAdmin">
         <div class="admin-actions">
           <button class="btn-outline btn-sm" @click="openCategoryModal">
             <i class="fas fa-folder-plus"></i> 카테고리 관리
@@ -42,33 +42,42 @@
         </div>
       </div>
 
-      <!-- 자료 목록 -->
-      <div class="ref-grid">
-        <div v-if="references.length === 0" class="empty-state">
-          <i class="fas fa-folder-open"></i>
-          <p>등록된 자료가 없습니다.</p>
-        </div>
-        <div v-for="item in references" :key="item.id" class="ref-card">
-          <div class="ref-card-icon">
-            <i class="fas fa-file-pdf"></i>
-          </div>
-          <div class="ref-card-content">
+      <!-- 자료 카드 그리드 -->
+      <div v-if="references.length === 0" class="empty-state">
+        <i class="fas fa-folder-open"></i>
+        <p>등록된 자료가 없습니다.</p>
+      </div>
+
+      <div v-else class="ref-grid">
+        <div v-for="item in references" :key="item.id" class="ref-card" @click="openDetail(item)">
+          <div class="ref-thumb">
+            <img
+              v-if="item.thumbnailPath"
+              :src="refStore.getThumbnailUrl(item.id)"
+              :alt="item.title"
+              class="ref-thumb-img"
+              @error="handleThumbError"
+            />
+            <div v-else class="ref-thumb-placeholder">
+              <i :class="getFileIcon(item.fileName)"></i>
+            </div>
             <span class="ref-category-tag" v-if="item.categoryName">{{ item.categoryName }}</span>
+          </div>
+          <div class="ref-card-body">
             <h3 class="ref-card-title">{{ item.title }}</h3>
             <p class="ref-card-desc" v-if="item.description">{{ item.description }}</p>
             <div class="ref-card-meta">
-              <span><i class="fas fa-calendar"></i> {{ formatDate(item.createdAt) }}</span>
+              <span><i class="fas fa-file"></i> {{ item.fileName }}</span>
               <span><i class="fas fa-download"></i> {{ item.downloadCount }}회</span>
             </div>
+            <div class="ref-card-date">
+              <i class="fas fa-calendar"></i> {{ formatDate(item.createdAt) }}
+            </div>
           </div>
-          <div class="ref-card-actions">
-            <a :href="getDownloadUrl(item.id)" class="btn-download" download>
-              <i class="fas fa-download"></i> 다운로드
-            </a>
-            <button v-if="authStore.isLoggedIn" class="btn-delete-sm" @click="handleDelete(item.id)">
-              <i class="fas fa-trash"></i>
-            </button>
-          </div>
+          <!-- 관리자 삭제 버튼 -->
+          <button v-if="isAdmin" class="ref-card-delete" @click.stop="handleDelete(item.id)" title="삭제">
+            <i class="fas fa-trash"></i>
+          </button>
         </div>
       </div>
 
@@ -104,6 +113,7 @@ import Swal from 'sweetalert2'
 const refStore = useReferenceStore()
 const authStore = useAuthStore()
 const { categories, references, totalPages, currentPage } = storeToRefs(refStore)
+const { isLoggedIn: isAdmin } = storeToRefs(authStore)
 
 const selectedCategory = ref(null)
 
@@ -130,18 +140,68 @@ function changePage(page) {
   }
 }
 
-function getDownloadUrl(id) {
-  return refStore.getDownloadUrl(id)
-}
-
 function formatDate(dateStr) {
   if (!dateStr) return ''
   const d = new Date(dateStr)
   return `${d.getFullYear()}.${String(d.getMonth() + 1).padStart(2, '0')}.${String(d.getDate()).padStart(2, '0')}`
 }
 
+function getFileIcon(fileName) {
+  if (!fileName) return 'fas fa-file'
+  const ext = fileName.split('.').pop().toLowerCase()
+  const icons = {
+    pdf: 'fas fa-file-pdf',
+    doc: 'fas fa-file-word', docx: 'fas fa-file-word',
+    xls: 'fas fa-file-excel', xlsx: 'fas fa-file-excel',
+    ppt: 'fas fa-file-powerpoint', pptx: 'fas fa-file-powerpoint',
+    zip: 'fas fa-file-archive', rar: 'fas fa-file-archive',
+    jpg: 'fas fa-file-image', jpeg: 'fas fa-file-image', png: 'fas fa-file-image', gif: 'fas fa-file-image',
+  }
+  return icons[ext] || 'fas fa-file'
+}
+
+function handleThumbError(e) {
+  e.target.style.display = 'none'
+  e.target.parentElement.classList.add('thumb-fallback')
+}
+
+/* 자료 상세 모달 */
+function openDetail(item) {
+  const thumbHtml = item.thumbnailPath
+    ? `<div style="margin-bottom:16px;"><img src="${refStore.getThumbnailUrl(item.id)}" style="max-width:100%;max-height:300px;border-radius:8px;object-fit:contain;" /></div>`
+    : ''
+
+  Swal.fire({
+    title: item.title,
+    html: `
+      ${thumbHtml}
+      ${item.description ? `<p style="text-align:left;color:#555;margin-bottom:12px;">${item.description}</p>` : ''}
+      <div style="text-align:left;font-size:0.85rem;color:#888;">
+        <p><i class="fas fa-folder" style="width:18px;"></i> ${item.categoryName || '미분류'}</p>
+        <p><i class="fas fa-file" style="width:18px;"></i> ${item.fileName}</p>
+        <p><i class="fas fa-download" style="width:18px;"></i> 다운로드 ${item.downloadCount}회</p>
+        <p><i class="fas fa-calendar" style="width:18px;"></i> ${formatDate(item.createdAt)}</p>
+      </div>
+    `,
+    showCancelButton: true,
+    confirmButtonText: '<i class="fas fa-download"></i> 다운로드',
+    cancelButtonText: '닫기',
+    confirmButtonColor: '#e8a020',
+  }).then((result) => {
+    if (result.isConfirmed) {
+      const link = document.createElement('a')
+      link.href = refStore.getDownloadUrl(item.id)
+      link.download = ''
+      document.body.appendChild(link)
+      link.click()
+      document.body.removeChild(link)
+    }
+  })
+}
+
+/* 카테고리 관리 모달 */
 async function openCategoryModal() {
-  const catList = categories.value.map(c => `<div class="swal-cat-row" style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+  const catList = categories.value.map(c => `<div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
     <span style="flex:1">${c.name} (순서: ${c.sortOrder})</span>
     <button class="swal-cat-del" data-id="${c.id}" style="background:#e74c3c;color:#fff;border:none;border-radius:4px;padding:4px 10px;cursor:pointer;font-size:0.8rem;">삭제</button>
   </div>`).join('')
@@ -196,6 +256,7 @@ async function openCategoryModal() {
   }
 }
 
+/* 자료 업로드 모달 (다중 파일 지원) */
 async function openUploadModal() {
   if (categories.value.length === 0) {
     Swal.fire({ icon: 'warning', title: '카테고리 필요', text: '먼저 카테고리를 추가해주세요.' })
@@ -206,18 +267,31 @@ async function openUploadModal() {
 
   const { value: formValues } = await Swal.fire({
     title: '자료 업로드',
+    width: 560,
     html: `
-      <select id="swal-ref-cat" class="swal2-select" style="width:100%;padding:10px;border:1px solid #d9d9d9;border-radius:4px;margin-bottom:12px;">
-        ${catOptions}
-      </select>
-      <input id="swal-ref-title" class="swal2-input" placeholder="자료 제목">
-      <textarea id="swal-ref-desc" class="swal2-textarea" placeholder="설명 (선택)"></textarea>
-      <input id="swal-ref-file" type="file" class="swal2-file" style="margin-top:8px;">
-      <input id="swal-ref-thumb" type="file" class="swal2-file" accept="image/*" style="margin-top:8px;">
-      <small style="color:#999;display:block;text-align:left;margin-top:4px;">썸네일 이미지 (선택)</small>
+      <div style="text-align:left;">
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">카테고리</label>
+        <select id="swal-ref-cat" class="swal2-select" style="width:100%;padding:10px;border:1px solid #d9d9d9;border-radius:4px;margin-bottom:16px;font-size:0.9rem;">
+          ${catOptions}
+        </select>
+
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">제목</label>
+        <input id="swal-ref-title" class="swal2-input" placeholder="자료 제목" style="margin:0 0 16px 0;width:100%;box-sizing:border-box;">
+
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">설명 <small style="color:#999">(선택)</small></label>
+        <textarea id="swal-ref-desc" class="swal2-textarea" placeholder="자료에 대한 설명" style="margin:0 0 16px 0;width:100%;box-sizing:border-box;min-height:80px;"></textarea>
+
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">첨부파일</label>
+        <input id="swal-ref-file" type="file" style="margin-bottom:8px;font-size:0.85rem;">
+        <p style="color:#999;font-size:0.78rem;margin-bottom:16px;">최대 10MB / PDF, 문서, 이미지, 압축파일 등</p>
+
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">썸네일 이미지 <small style="color:#999">(선택)</small></label>
+        <input id="swal-ref-thumb" type="file" accept="image/*" style="margin-bottom:4px;font-size:0.85rem;">
+        <p style="color:#e8a020;font-size:0.78rem;"><i class="fas fa-info-circle"></i> 이미지 파일만 업로드 가능합니다 (JPG, PNG, GIF, WebP)</p>
+      </div>
     `,
     showCancelButton: true,
-    confirmButtonText: '업로드',
+    confirmButtonText: '<i class="fas fa-upload"></i> 업로드',
     cancelButtonText: '취소',
     confirmButtonColor: '#1a3a5c',
     preConfirm: () => {
@@ -235,6 +309,14 @@ async function openUploadModal() {
         Swal.showValidationMessage('파일을 선택해주세요.')
         return false
       }
+      if (file.size > 10 * 1024 * 1024) {
+        Swal.showValidationMessage('파일 크기는 10MB를 초과할 수 없습니다.')
+        return false
+      }
+      if (thumbnail && !thumbnail.type.startsWith('image/')) {
+        Swal.showValidationMessage('썸네일은 이미지 파일만 가능합니다.')
+        return false
+      }
 
       const formData = new FormData()
       formData.append('categoryId', categoryId)
@@ -250,7 +332,11 @@ async function openUploadModal() {
 
   try {
     await refStore.createReference(formValues)
-    await refStore.fetchReferences()
+    if (selectedCategory.value) {
+      await refStore.fetchByCategory(selectedCategory.value)
+    } else {
+      await refStore.fetchReferences()
+    }
     Swal.fire({ icon: 'success', title: '업로드 완료', text: '자료가 등록되었습니다.', timer: 1500, showConfirmButton: false })
   } catch {
     Swal.fire({ icon: 'error', title: '업로드 실패', text: '파일 업로드에 실패했습니다.' })
@@ -411,7 +497,6 @@ async function handleDelete(id) {
   font-size: 0.9rem;
   cursor: pointer;
   transition: var(--transition);
-  text-decoration: none;
 }
 
 .btn-outline:hover {
@@ -424,11 +509,11 @@ async function handleDelete(id) {
   font-size: 0.85rem;
 }
 
-/* 자료 그리드 */
+/* 자료 카드 그리드 */
 .ref-grid {
-  display: flex;
-  flex-direction: column;
-  gap: 12px;
+  display: grid;
+  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
+  gap: 20px;
 }
 
 .empty-state {
@@ -444,126 +529,159 @@ async function handleDelete(id) {
 }
 
 .ref-card {
-  display: flex;
-  align-items: center;
-  gap: 20px;
-  padding: 20px 24px;
+  position: relative;
   background: var(--white);
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
+  overflow: hidden;
+  cursor: pointer;
   transition: var(--transition);
 }
 
 .ref-card:hover {
   box-shadow: var(--shadow-md);
-  transform: translateY(-2px);
+  transform: translateY(-4px);
 }
 
-.ref-card-icon {
-  width: 52px;
-  height: 52px;
+/* 썸네일 영역 */
+.ref-thumb {
+  position: relative;
+  width: 100%;
+  height: 180px;
+  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
+  overflow: hidden;
+}
+
+.ref-thumb-img {
+  width: 100%;
+  height: 100%;
+  object-fit: cover;
+}
+
+.ref-thumb-placeholder {
+  width: 100%;
+  height: 100%;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: linear-gradient(135deg, var(--primary), var(--primary-light));
-  border-radius: var(--radius-sm);
-  flex-shrink: 0;
 }
 
-.ref-card-icon i {
-  font-size: 1.4rem;
-  color: var(--white);
+.ref-thumb-placeholder i {
+  font-size: 3rem;
+  color: var(--primary);
+  opacity: 0.25;
 }
 
-.ref-card-content {
-  flex: 1;
-  min-width: 0;
+.thumb-fallback {
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.thumb-fallback::after {
+  content: '\f15b';
+  font-family: 'Font Awesome 6 Free';
+  font-weight: 900;
+  font-size: 3rem;
+  color: var(--primary);
+  opacity: 0.25;
 }
 
 .ref-category-tag {
-  display: inline-block;
-  font-size: 0.75rem;
-  padding: 2px 10px;
-  background: var(--bg-section);
-  color: var(--primary);
-  border-radius: 10px;
-  margin-bottom: 6px;
+  position: absolute;
+  top: 10px;
+  left: 10px;
+  font-size: 0.72rem;
+  padding: 3px 10px;
+  background: rgba(26, 58, 92, 0.85);
+  color: var(--white);
+  border-radius: 12px;
+  backdrop-filter: blur(4px);
+}
+
+/* 카드 바디 */
+.ref-card-body {
+  padding: 16px 18px 18px;
 }
 
 .ref-card-title {
-  font-size: 1rem;
+  font-size: 0.95rem;
   font-weight: 600;
   color: var(--text-dark);
-  margin-bottom: 4px;
-  white-space: nowrap;
+  margin-bottom: 6px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
+  line-height: 1.4;
 }
 
 .ref-card-desc {
-  font-size: 0.85rem;
+  font-size: 0.82rem;
   color: var(--text-muted);
-  white-space: nowrap;
+  margin-bottom: 10px;
+  display: -webkit-box;
+  -webkit-line-clamp: 2;
+  -webkit-box-orient: vertical;
   overflow: hidden;
-  text-overflow: ellipsis;
-  margin-bottom: 6px;
+  line-height: 1.5;
 }
 
 .ref-card-meta {
   display: flex;
-  gap: 16px;
-  font-size: 0.8rem;
+  gap: 14px;
+  font-size: 0.78rem;
   color: var(--text-muted);
+  margin-bottom: 6px;
 }
 
 .ref-card-meta i {
-  margin-right: 4px;
+  margin-right: 3px;
 }
 
-.ref-card-actions {
-  display: flex;
-  align-items: center;
-  gap: 8px;
-  flex-shrink: 0;
+.ref-card-meta span {
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  max-width: 160px;
 }
 
-.btn-download {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 8px 18px;
-  background: var(--accent);
-  color: var(--white);
-  border: none;
-  border-radius: var(--radius-sm);
-  font-size: 0.85rem;
-  font-weight: 500;
-  cursor: pointer;
-  transition: var(--transition);
-  text-decoration: none;
+.ref-card-date {
+  font-size: 0.76rem;
+  color: var(--text-muted);
 }
 
-.btn-download:hover {
-  background: var(--accent-light);
+.ref-card-date i {
+  margin-right: 3px;
 }
 
-.btn-delete-sm {
-  width: 36px;
-  height: 36px;
+/* 관리자 삭제 버튼 */
+.ref-card-delete {
+  position: absolute;
+  top: 10px;
+  right: 10px;
+  width: 32px;
+  height: 32px;
   display: flex;
   align-items: center;
   justify-content: center;
-  background: var(--white);
-  border: 1px solid #e74c3c;
-  border-radius: var(--radius-sm);
-  color: #e74c3c;
+  background: rgba(231, 76, 60, 0.9);
+  border: none;
+  border-radius: 50%;
+  color: #fff;
+  font-size: 0.8rem;
   cursor: pointer;
+  opacity: 0;
   transition: var(--transition);
 }
 
-.btn-delete-sm:hover {
-  background: #e74c3c;
-  color: var(--white);
+.ref-card:hover .ref-card-delete {
+  opacity: 1;
+}
+
+.ref-card-delete:hover {
+  background: #c0392b;
+  transform: scale(1.1);
 }
 
 /* 페이지네이션 */
@@ -609,12 +727,14 @@ async function handleDelete(id) {
 @media (max-width: 768px) {
   .page-hero { height: 200px; }
   .page-hero-title { font-size: 1.6rem; }
-  .ref-card { flex-direction: column; align-items: flex-start; gap: 12px; }
-  .ref-card-actions { width: 100%; justify-content: flex-end; }
-  .ref-card-icon { width: 40px; height: 40px; }
-  .ref-card-icon i { font-size: 1.1rem; }
+  .ref-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
+  .ref-thumb { height: 150px; }
   .admin-actions { flex-direction: column; width: 100%; }
   .admin-actions .btn-outline,
   .admin-actions .btn-primary { width: 100%; justify-content: center; }
+}
+
+@media (max-width: 480px) {
+  .ref-grid { grid-template-columns: 1fr; }
 }
 </style>
