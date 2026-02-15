@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "dev" ] # main 또는 dev 브랜치 푸시 시 트리거
+    branches: [ "dev" ]
 
 permissions:
   contents: read
@@ -52,11 +52,35 @@ jobs:
           host: ${{ secrets.HOST }}
           username: ${{ secrets.USERNAME }}
           key: ${{ secrets.SSH_KEY }}
+          # 타임아웃 방지를 위해 넉넉하게 설정
+          timeout: 60s
           script: |
             cd ~/workspace/sm-osh-company-website
             git pull origin dev
-            # 최신 이미지 이미지 다운로드 및 컨테이너 재생성
+
+            # [중요] GitHub Secrets 내용을 .env 파일로 생성
+            # (기존 파일이 있어도 덮어씁니다)
+            cat > .env <<EOF
+            MYSQL_DATABASE=${{ secrets.MYSQL_DATABASE }}
+            MYSQL_USER=${{ secrets.MYSQL_USERNAME }}
+            MYSQL_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+            MYSQL_ROOT_PASSWORD=${{ secrets.MYSQL_PASSWORD }}
+            APP_ADMIN_USERNAME=${{ secrets.APP_ADMIN_USERNAME }}
+            APP_ADMIN_PASSWORD=${{ secrets.APP_ADMIN_PASSWORD }}
+            APP_ADMIN_NAME=${{ secrets.APP_ADMIN_NAME }}
+            EOF
+
+            # 배포 서버 전용 override: MySQL을 127.0.0.1에만 노출 (SSH 터널용)
+            cat > docker-compose.override.yml << 'OVERRIDE'
+            services:
+              db:
+                ports:
+                  - "127.0.0.1:3306:3306"
+            OVERRIDE
+
+            # 최신 이미지 다운로드 및 컨테이너 재생성
             docker compose pull
             docker compose up -d
+            
             # 미사용 이미지 정리 (용량 확보)
             docker image prune -f

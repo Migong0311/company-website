@@ -61,4 +61,8 @@ $RECYCLE.BIN/
 # Windows shortcuts
 *.lnk
 
+# 로컬 개발 전용 (배포 서버에 올라가면 안 됨)
+docker-compose.override.yml
+.env
+
 # End of https://www.toptal.com/developers/gitignore/api/java,vuejs,windows

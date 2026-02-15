@@ -1,17 +1,19 @@
 services:
   # [1] 백엔드 서비스 (Spring Boot)
   backend:
-    # GitHub Container Registry 주소를 추가합니다.
     image: ghcr.io/migong0311/sm-osh-company-website-backend:latest
     build: ./backend
     container_name: safety-backend
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/ssafit?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
-      - SPRING_DATASOURCE_USERNAME=root
-      - SPRING_DATASOURCE_PASSWORD=ssafit_password
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/${MYSQL_DATABASE:-ssafit}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
+      - SPRING_DATASOURCE_USERNAME=${MYSQL_USERNAME:-root}
+      - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD:-ssafit_password}
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
+      - APP_ADMIN_USERNAME=${APP_ADMIN_USERNAME:-admin}
+      - APP_ADMIN_PASSWORD=${APP_ADMIN_PASSWORD:-admin1234}
+      - APP_ADMIN_NAME=${APP_ADMIN_NAME:-관리자}
     depends_on:
       - db
     networks:
@@ -19,7 +21,6 @@ services:
 
   # [2] 프론트엔드 서비스 (Vue.js + Nginx)
   frontend:
-    # GitHub Container Registry 주소를 추가합니다.
     image: ghcr.io/migong0311/sm-osh-company-website-frontend:latest
     build: ./frontend
     container_name: safety-frontend
@@ -32,10 +33,10 @@ services:
     container_name: safety-db
     restart: always
     environment:
-      MYSQL_DATABASE: ssafit
-      MYSQL_ROOT_PASSWORD: ssafit_password
+      MYSQL_DATABASE: ${MYSQL_DATABASE:-ssafit}
+      MYSQL_ROOT_PASSWORD: ${MYSQL_PASSWORD:-ssafit_password}
       TZ: Asia/Seoul
-    command: 
+    command:
       - --character-set-server=utf8mb4
       - --collation-server=utf8mb4_unicode_ci
     volumes:
