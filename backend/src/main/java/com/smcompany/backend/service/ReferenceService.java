@@ -56,7 +56,12 @@ public class ReferenceService {
         ReferenceCategory category = categoryRepository.findById(request.getCategoryId())
                 .orElseThrow(() -> new RuntimeException("카테고리를 찾을 수 없습니다."));
 
-        String storedFileName = fileStorageService.storeFile(file);
+        String storedFileName = null;
+        String originalFileName = null;
+        if (file != null && !file.isEmpty()) {
+            storedFileName = fileStorageService.storeFile(file);
+            originalFileName = file.getOriginalFilename();
+        }
         String thumbnailName = null;
         if (thumbnail != null && !thumbnail.isEmpty()) {
             thumbnailName = fileStorageService.storeThumbnail(thumbnail);
@@ -66,14 +71,14 @@ public class ReferenceService {
                 .category(category)
                 .title(request.getTitle())
                 .description(request.getDescription())
-                .fileName(file.getOriginalFilename())
+                .fileName(originalFileName)
                 .filePath(storedFileName)
                 .thumbnailPath(thumbnailName)
                 .build();
 
         Reference saved = referenceRepository.save(reference);
 
-        // 갤러리 이미지 저장 (최대 3장)
+        // 갤러리 이미지 저장 (최대 5장)
         if (images != null) {
             for (int i = 0; i < images.size(); i++) {
                 MultipartFile img = images.get(i);

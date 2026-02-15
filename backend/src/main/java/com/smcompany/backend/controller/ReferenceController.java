@@ -54,11 +54,11 @@ public class ReferenceController {
             @RequestParam("categoryId") Long categoryId,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam(value = "file", required = false) MultipartFile file,
             @RequestParam(value = "thumbnail", required = false) MultipartFile thumbnail,
             @RequestParam(value = "images", required = false) List<MultipartFile> images) {
 
-        if (images != null && images.size() > 3) {
+        if (images != null && images.size() > 5) {
             return ResponseEntity.badRequest().build();
         }
 

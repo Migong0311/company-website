@@ -31,10 +31,10 @@
           <p>{{ reference.description }}</p>
         </div>
 
-        <!-- 갤러리 이미지 -->
+        <!-- 갤러리 이미지 (세로 나열) -->
         <div v-if="reference.images && reference.images.length > 0" class="detail-gallery">
           <h3 class="section-title"><i class="fas fa-images"></i> 관련 이미지</h3>
-          <div class="gallery-grid">
+          <div class="gallery-list">
             <div
               v-for="img in reference.images"
               :key="img.id"
@@ -47,25 +47,12 @@
         </div>
 
         <!-- 첨부파일 목록 -->
-        <div class="detail-files">
-          <h3 class="section-title"><i class="fas fa-paperclip"></i> 첨부파일 ({{ fileCount }}개)</h3>
+        <div v-if="reference.fileName" class="detail-files">
+          <h3 class="section-title"><i class="fas fa-paperclip"></i> 첨부파일</h3>
           <div class="file-list">
-            <!-- 메인 파일 -->
             <a :href="refStore.getDownloadUrl(reference.id)" download class="file-item">
               <i :class="getFileIcon(reference.fileName)"></i>
               <span class="file-name">{{ reference.fileName }}</span>
-              <i class="fas fa-download file-dl-icon"></i>
-            </a>
-            <!-- 추가 파일 -->
-            <a
-              v-for="f in reference.files"
-              :key="f.id"
-              :href="refStore.getFileDownloadUrl(f.id)"
-              download
-              class="file-item"
-            >
-              <i :class="getFileIcon(f.fileName)"></i>
-              <span class="file-name">{{ f.fileName }}</span>
               <i class="fas fa-download file-dl-icon"></i>
             </a>
           </div>
@@ -101,7 +88,7 @@
 </template>
 
 <script setup>
-import { ref, computed, onMounted } from 'vue'
+import { ref, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useReferenceStore } from '@/stores/reference'
@@ -116,11 +103,6 @@ const { isLoggedIn: isAdmin } = storeToRefs(authStore)
 
 const reference = ref(null)
 const viewerImage = ref(null)
-
-const fileCount = computed(() => {
-  if (!reference.value) return 0
-  return 1 + (reference.value.files ? reference.value.files.length : 0)
-})
 
 onMounted(async () => {
   await authStore.checkLogin()
@@ -321,10 +303,10 @@ async function handleDelete() {
   color: var(--primary);
 }
 
-.gallery-grid {
-  display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
-  gap: 12px;
+.gallery-list {
+  display: flex;
+  flex-direction: column;
+  gap: 16px;
 }
 
 .gallery-item {
@@ -333,18 +315,16 @@ async function handleDelete() {
   border: 1px solid var(--border);
   cursor: pointer;
   transition: all 0.3s ease;
-  aspect-ratio: 4 / 3;
 }
 
 .gallery-item:hover {
-  transform: translateY(-2px);
   box-shadow: 0 4px 12px rgba(0, 0, 0, 0.12);
 }
 
 .gallery-item img {
   width: 100%;
-  height: 100%;
-  object-fit: cover;
+  display: block;
+  object-fit: contain;
 }
 
 /* 첨부파일 */
@@ -505,7 +485,6 @@ async function handleDelete() {
   .detail-thumbnail { padding: 16px 20px; }
   .detail-description { padding: 0 20px 20px; }
   .detail-gallery { padding: 0 20px 20px; }
-  .gallery-grid { grid-template-columns: repeat(2, 1fr); }
   .detail-files { padding: 20px; }
   .detail-actions { padding: 20px; }
 }

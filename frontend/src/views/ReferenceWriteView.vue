@@ -30,7 +30,7 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">첨부파일 <span class="required">*</span> <span class="hint">50MB 이하</span></label>
+          <label class="form-label">첨부파일 <span class="optional">(선택)</span> <span class="hint">50MB 이하</span></label>
           <input type="file" ref="fileInput" class="form-file" @change="handleFileChange" />
           <p v-if="fileError" class="field-error">{{ fileError }}</p>
         </div>
@@ -42,9 +42,9 @@
         </div>
 
         <div class="form-group">
-          <label class="form-label">갤러리 이미지 <span class="optional">(선택, 최대 3장, 각 50MB 이하)</span></label>
+          <label class="form-label">갤러리 이미지 <span class="optional">(선택, 최대 5장, 각 50MB 이하)</span></label>
           <div class="image-inputs">
-            <div v-for="i in 3" :key="i" class="image-input-row">
+            <div v-for="i in 5" :key="i" class="image-input-row">
               <span class="image-label">이미지 {{ i }}</span>
               <input type="file" :ref="el => imageRefs[i-1] = el" accept="image/*" class="form-file" @change="handleImageChange(i-1, $event)" />
             </div>
@@ -161,11 +161,7 @@ async function handleSubmit() {
   }
 
   const file = fileInput.value?.files[0]
-  if (!file) {
-    Swal.fire({ icon: 'warning', title: '입력 필요', text: '첨부파일을 선택해주세요.' })
-    return
-  }
-  if (file.size > MAX_FILE_SIZE) {
+  if (file && file.size > MAX_FILE_SIZE) {
     Swal.fire({ icon: 'warning', title: '용량 초과', text: '첨부파일이 50MB를 초과합니다.' })
     return
   }
@@ -182,7 +178,7 @@ async function handleSubmit() {
 
   // 갤러리 이미지 수집
   const images = []
-  for (let i = 0; i < 3; i++) {
+  for (let i = 0; i < 5; i++) {
     const imgFile = imageRefs.value[i]?.files[0]
     if (imgFile) {
       if (!imgFile.type.startsWith('image/')) {
@@ -202,7 +198,7 @@ async function handleSubmit() {
   formData.append('categoryId', form.value.categoryId)
   formData.append('title', form.value.title.trim())
   if (form.value.description.trim()) formData.append('description', form.value.description.trim())
-  formData.append('file', file)
+  if (file) formData.append('file', file)
   if (thumbnail) formData.append('thumbnail', thumbnail)
   for (const img of images) {
     formData.append('images', img)
