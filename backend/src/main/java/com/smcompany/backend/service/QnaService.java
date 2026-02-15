@@ -30,8 +30,13 @@ public class QnaService {
     // ===== 게시글 =====
 
     public Page<QnaPostResponse> getAllPosts(Pageable pageable) {
-        return postRepository.findAllByOrderByCreatedAtDesc(pageable)
+        return postRepository.findAllByOrderByIsNoticeDescCreatedAtDesc(pageable)
                 .map(QnaPostResponse::listFrom);
+    }
+
+    public Page<QnaPostResponse> searchPosts(String keyword, Pageable pageable) {
+        return postRepository.findByTitleContainingOrContentContainingOrderByIsNoticeDescCreatedAtDesc(
+                keyword, keyword, pageable).map(QnaPostResponse::listFrom);
     }
 
     @Transactional
@@ -44,11 +49,15 @@ public class QnaService {
 
     @Transactional
     public QnaPostResponse createPost(QnaPostRequest request) {
+        String encodedPassword = (request.getPassword() != null && !request.getPassword().isBlank())
+                ? passwordEncoder.encode(request.getPassword())
+                : passwordEncoder.encode("admin");
         QnaPost post = QnaPost.builder()
                 .authorName(request.getAuthorName())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(encodedPassword)
                 .title(request.getTitle())
                 .content(request.getContent())
+                .isNotice(request.getIsNotice())
                 .build();
         return QnaPostResponse.from(postRepository.save(post));
     }
@@ -57,7 +66,7 @@ public class QnaService {
     public QnaPostResponse updatePost(Long id, QnaPostRequest request) {
         QnaPost post = postRepository.findById(id)
                 .orElseThrow(() -> new RuntimeException("게시글을 찾을 수 없습니다."));
-        post.update(request.getTitle(), request.getContent());
+        post.update(request.getTitle(), request.getContent(), request.getIsNotice());
         return QnaPostResponse.from(post);
     }
 
@@ -91,11 +100,14 @@ public class QnaService {
                     .orElseThrow(() -> new RuntimeException("부모 댓글을 찾을 수 없습니다."));
         }
 
+        String encodedPassword = (request.getPassword() != null && !request.getPassword().isBlank())
+                ? passwordEncoder.encode(request.getPassword())
+                : passwordEncoder.encode("admin");
         QnaComment comment = QnaComment.builder()
                 .post(post)
                 .parent(parent)
                 .authorName(request.getAuthorName())
-                .password(passwordEncoder.encode(request.getPassword()))
+                .password(encodedPassword)
                 .content(request.getContent())
                 .isAdmin(isAdmin)
                 .build();

@@ -7,8 +7,8 @@
       <div class="comment-content">
         <div class="comment-header">
           <div class="comment-author">
-            <span class="author-name">{{ comment.authorName }}</span>
-            <span v-if="comment.isAdmin" class="admin-badge">관리자</span>
+            <span v-if="comment.isAdmin" class="admin-badge"><i class="fas fa-user-shield"></i> 관리자</span>
+            <span v-else class="author-name">{{ comment.authorName }}</span>
           </div>
           <span class="comment-date">{{ formatDate(comment.createdAt) }}</span>
         </div>

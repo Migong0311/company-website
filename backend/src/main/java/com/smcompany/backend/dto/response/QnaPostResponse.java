@@ -13,6 +13,7 @@ public class QnaPostResponse {
     private String authorName;
     private String title;
     private String content;
+    private Boolean isNotice;
     private Integer viewCount;
     private Integer commentCount;
     private LocalDateTime createdAt;
@@ -24,6 +25,7 @@ public class QnaPostResponse {
                 .authorName(post.getAuthorName())
                 .title(post.getTitle())
                 .content(post.getContent())
+                .isNotice(post.getIsNotice())
                 .viewCount(post.getViewCount())
                 .commentCount(post.getComments() != null ? post.getComments().size() : 0)
                 .createdAt(post.getCreatedAt())
@@ -36,6 +38,7 @@ public class QnaPostResponse {
                 .id(post.getId())
                 .authorName(post.getAuthorName())
                 .title(post.getTitle())
+                .isNotice(post.getIsNotice())
                 .viewCount(post.getViewCount())
                 .commentCount(post.getComments() != null ? post.getComments().size() : 0)
                 .createdAt(post.getCreatedAt())

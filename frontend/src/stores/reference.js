@@ -29,7 +29,7 @@ export const useReferenceStore = defineStore('reference', () => {
     await api.delete(`/reference-categories/${id}`)
   }
 
-  async function fetchReferences(page = 0, size = 10) {
+  async function fetchReferences(page = 0, size = 8) {
     const { data } = await api.get('/references', { params: { page, size } })
     references.value = data.content
     totalPages.value = data.totalPages
@@ -37,7 +37,15 @@ export const useReferenceStore = defineStore('reference', () => {
     currentPage.value = data.number
   }
 
-  async function fetchByCategory(categoryId, page = 0, size = 10) {
+  async function searchReferences(keyword, page = 0, size = 8) {
+    const { data } = await api.get('/references/search', { params: { keyword, page, size } })
+    references.value = data.content
+    totalPages.value = data.totalPages
+    totalElements.value = data.totalElements
+    currentPage.value = data.number
+  }
+
+  async function fetchByCategory(categoryId, page = 0, size = 8) {
     const { data } = await api.get(`/references/category/${categoryId}`, { params: { page, size } })
     references.value = data.content
     totalPages.value = data.totalPages
@@ -69,10 +77,14 @@ export const useReferenceStore = defineStore('reference', () => {
     return `/api/references/${id}/thumbnail`
   }
 
+  function getFileDownloadUrl(fileId) {
+    return `/api/references/files/${fileId}/download`
+  }
+
   return {
     categories, references, totalPages, totalElements, currentPage,
     fetchCategories, createCategory, updateCategory, deleteCategory,
-    fetchReferences, fetchByCategory, fetchReference, createReference, deleteReference,
-    getDownloadUrl, getThumbnailUrl
+    fetchReferences, searchReferences, fetchByCategory, fetchReference, createReference, deleteReference,
+    getDownloadUrl, getThumbnailUrl, getFileDownloadUrl
   }
 })

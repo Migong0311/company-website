@@ -11,7 +11,6 @@ public class QnaCommentRequest {
     @NotBlank(message = "작성자명을 입력해주세요.")
     private String authorName;
 
-    @NotBlank(message = "비밀번호를 입력해주세요.")
     private String password;
 
     @NotBlank(message = "내용을 입력해주세요.")

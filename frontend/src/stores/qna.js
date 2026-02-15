@@ -18,6 +18,14 @@ export const useQnaStore = defineStore('qna', () => {
     currentPage.value = data.number
   }
 
+  async function searchPosts(keyword, page = 0, size = 15) {
+    const { data } = await api.get('/qna/search', { params: { keyword, page, size } })
+    posts.value = data.content
+    totalPages.value = data.totalPages
+    totalElements.value = data.totalElements
+    currentPage.value = data.number
+  }
+
   async function fetchPost(id) {
     const { data } = await api.get(`/qna/${id}`)
     currentPost.value = data
@@ -70,7 +78,7 @@ export const useQnaStore = defineStore('qna', () => {
 
   return {
     posts, currentPost, comments, totalPages, totalElements, currentPage,
-    fetchPosts, fetchPost, createPost, checkPostPassword, updatePost, deletePost,
+    fetchPosts, searchPosts, fetchPost, createPost, checkPostPassword, updatePost, deletePost,
     fetchComments, createComment, checkCommentPassword, updateComment, deleteComment
   }
 })

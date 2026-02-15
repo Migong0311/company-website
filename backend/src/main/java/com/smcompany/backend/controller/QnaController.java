@@ -34,6 +34,13 @@ public class QnaController {
         return ResponseEntity.ok(qnaService.getAllPosts(pageable));
     }
 
+    @GetMapping("/search")
+    public ResponseEntity<Page<QnaPostResponse>> searchPosts(
+            @RequestParam String keyword,
+            @PageableDefault(size = 15) Pageable pageable) {
+        return ResponseEntity.ok(qnaService.searchPosts(keyword, pageable));
+    }
+
     @GetMapping("/{id}")
     public ResponseEntity<QnaPostResponse> getPost(@PathVariable Long id) {
         return ResponseEntity.ok(qnaService.getPost(id));

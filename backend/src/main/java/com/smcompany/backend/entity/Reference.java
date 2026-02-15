@@ -7,6 +7,8 @@ import lombok.Getter;
 import lombok.NoArgsConstructor;
 
 import java.time.LocalDateTime;
+import java.util.ArrayList;
+import java.util.List;
 
 /**
  * 자료실 자료 엔티티.
@@ -47,6 +49,11 @@ public class Reference {
     /** 썸네일 이미지 저장 경로 */
     @Column(name = "thumbnail_path", length = 500)
     private String thumbnailPath;
+
+    /** 추가 첨부파일 목록 */
+    @OneToMany(mappedBy = "reference", cascade = CascadeType.ALL, orphanRemoval = true)
+    @OrderBy("sortOrder ASC")
+    private List<ReferenceFile> files = new ArrayList<>();
 
     /** 다운로드 횟수 (기본값 0) */
     @Column(name = "download_count")

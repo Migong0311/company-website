@@ -10,37 +10,52 @@
     </div>
 
     <div class="page-container">
-      <!-- 카테고리 필터 -->
-      <div class="category-filter">
-        <button
-          class="filter-btn"
-          :class="{ active: selectedCategory === null }"
-          @click="filterByCategory(null)"
-        >
-          전체
-        </button>
-        <button
-          v-for="cat in categories"
-          :key="cat.id"
-          class="filter-btn"
-          :class="{ active: selectedCategory === cat.id }"
-          @click="filterByCategory(cat.id)"
-        >
-          {{ cat.name }}
-        </button>
-      </div>
-
-      <!-- 관리자 기능 -->
-      <div class="board-header" v-if="isAdmin">
-        <div class="admin-actions">
-          <button class="btn-outline btn-sm" @click="openCategoryModal">
-            <i class="fas fa-folder-plus"></i> 카테고리 관리
+      <!-- 카테고리 필터 + 검색 + 관리 -->
+      <div class="board-header">
+        <div class="category-filter">
+          <button
+            class="filter-btn"
+            :class="{ active: selectedCategory === null }"
+            @click="filterByCategory(null)"
+          >
+            전체
           </button>
-          <button class="btn-primary btn-sm" @click="openUploadModal">
-            <i class="fas fa-upload"></i> 자료 업로드
+          <button
+            v-for="cat in categories"
+            :key="cat.id"
+            class="filter-btn"
+            :class="{ active: selectedCategory === cat.id }"
+            @click="filterByCategory(cat.id)"
+          >
+            {{ cat.name }}
           </button>
         </div>
+        <div class="board-header-right">
+          <div class="search-box">
+            <input
+              v-model="searchKeyword"
+              type="text"
+              placeholder="제목/설명 검색"
+              class="search-input"
+              @keydown.enter="handleSearch"
+            />
+            <button class="search-btn" @click="handleSearch">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+          <template v-if="isAdmin">
+            <button class="btn-outline btn-sm" @click="openCategoryModal">
+              <i class="fas fa-folder-plus"></i> 카테고리
+            </button>
+            <button class="btn-primary btn-sm" @click="openUploadModal">
+              <i class="fas fa-upload"></i> 업로드
+            </button>
+          </template>
+        </div>
       </div>
+
+      <!-- 총 건수 -->
+      <p class="board-count">총 <strong>{{ totalElements }}</strong>건</p>
 
       <!-- 자료 카드 그리드 -->
       <div v-if="references.length === 0" class="empty-state">
@@ -67,7 +82,7 @@
             <h3 class="ref-card-title">{{ item.title }}</h3>
             <p class="ref-card-desc" v-if="item.description">{{ item.description }}</p>
             <div class="ref-card-meta">
-              <span><i class="fas fa-file"></i> {{ item.fileName }}</span>
+              <span><i class="fas fa-paperclip"></i> {{ getFileCount(item) }}개 파일</span>
               <span><i class="fas fa-download"></i> {{ item.downloadCount }}회</span>
             </div>
             <div class="ref-card-date">
@@ -100,11 +115,16 @@
         </button>
       </div>
     </div>
+
+    <!-- 맨위로 버튼 -->
+    <button v-show="showScrollTop" class="scroll-top-btn" @click="scrollToTop" title="맨위로">
+      <i class="fas fa-arrow-up"></i>
+    </button>
   </div>
 </template>
 
 <script setup>
-import { ref, onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { storeToRefs } from 'pinia'
 import { useReferenceStore } from '@/stores/reference'
 import { useAuthStore } from '@/stores/auth'
@@ -112,19 +132,37 @@ import Swal from 'sweetalert2'
 
 const refStore = useReferenceStore()
 const authStore = useAuthStore()
-const { categories, references, totalPages, currentPage } = storeToRefs(refStore)
+const { categories, references, totalPages, totalElements, currentPage } = storeToRefs(refStore)
 const { isLoggedIn: isAdmin } = storeToRefs(authStore)
 
 const selectedCategory = ref(null)
+const searchKeyword = ref('')
+const isSearching = ref(false)
+const showScrollTop = ref(false)
 
 onMounted(async () => {
   await authStore.checkLogin()
   await refStore.fetchCategories()
   await refStore.fetchReferences()
+  window.addEventListener('scroll', handleScroll)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+function handleScroll() {
+  showScrollTop.value = window.scrollY > 300
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 function filterByCategory(categoryId) {
   selectedCategory.value = categoryId
+  searchKeyword.value = ''
+  isSearching.value = false
   if (categoryId) {
     refStore.fetchByCategory(categoryId)
   } else {
@@ -133,11 +171,28 @@ function filterByCategory(categoryId) {
 }
 
 function changePage(page) {
-  if (selectedCategory.value) {
+  if (isSearching.value && searchKeyword.value) {
+    refStore.searchReferences(searchKeyword.value, page)
+  } else if (selectedCategory.value) {
     refStore.fetchByCategory(selectedCategory.value, page)
   } else {
     refStore.fetchReferences(page)
   }
+}
+
+function handleSearch() {
+  if (searchKeyword.value.trim()) {
+    isSearching.value = true
+    selectedCategory.value = null
+    refStore.searchReferences(searchKeyword.value.trim(), 0)
+  } else {
+    isSearching.value = false
+    refStore.fetchReferences(0)
+  }
+}
+
+function getFileCount(item) {
+  return 1 + (item.files ? item.files.length : 0)
 }
 
 function formatDate(dateStr) {
@@ -168,34 +223,48 @@ function handleThumbError(e) {
 /* 자료 상세 모달 */
 function openDetail(item) {
   const thumbHtml = item.thumbnailPath
-    ? `<div style="margin-bottom:16px;"><img src="${refStore.getThumbnailUrl(item.id)}" style="max-width:100%;max-height:300px;border-radius:8px;object-fit:contain;" /></div>`
+    ? `<div style="margin-bottom:16px;"><img src="${refStore.getThumbnailUrl(item.id)}" style="max-width:100%;max-height:400px;border-radius:8px;object-fit:contain;" /></div>`
     : ''
+
+  // 파일 목록 생성
+  let filesHtml = `<div style="text-align:left;margin-top:12px;">
+    <p style="font-weight:600;font-size:0.85rem;margin-bottom:8px;"><i class="fas fa-paperclip"></i> 첨부파일</p>
+    <div style="display:flex;flex-direction:column;gap:6px;">`
+
+  // 메인 파일
+  filesHtml += `<a href="${refStore.getDownloadUrl(item.id)}" download style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fa;border-radius:6px;text-decoration:none;color:#333;font-size:0.85rem;transition:background 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">
+    <i class="${getFileIcon(item.fileName)}" style="color:#1a3a5c;"></i>
+    <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${item.fileName}</span>
+    <i class="fas fa-download" style="color:#e8a020;"></i>
+  </a>`
+
+  // 추가 파일들
+  if (item.files && item.files.length > 0) {
+    item.files.forEach(f => {
+      filesHtml += `<a href="${refStore.getFileDownloadUrl(f.id)}" download style="display:flex;align-items:center;gap:8px;padding:8px 12px;background:#f8f9fa;border-radius:6px;text-decoration:none;color:#333;font-size:0.85rem;transition:background 0.2s;" onmouseover="this.style.background='#e9ecef'" onmouseout="this.style.background='#f8f9fa'">
+        <i class="${getFileIcon(f.fileName)}" style="color:#1a3a5c;"></i>
+        <span style="flex:1;overflow:hidden;text-overflow:ellipsis;white-space:nowrap;">${f.fileName}</span>
+        <i class="fas fa-download" style="color:#e8a020;"></i>
+      </a>`
+    })
+  }
+  filesHtml += '</div></div>'
 
   Swal.fire({
     title: item.title,
+    width: 600,
     html: `
       ${thumbHtml}
-      ${item.description ? `<p style="text-align:left;color:#555;margin-bottom:12px;">${item.description}</p>` : ''}
-      <div style="text-align:left;font-size:0.85rem;color:#888;">
+      ${item.description ? `<p style="text-align:left;color:#555;margin-bottom:12px;line-height:1.6;">${item.description}</p>` : ''}
+      <div style="text-align:left;font-size:0.85rem;color:#888;margin-bottom:8px;">
         <p><i class="fas fa-folder" style="width:18px;"></i> ${item.categoryName || '미분류'}</p>
-        <p><i class="fas fa-file" style="width:18px;"></i> ${item.fileName}</p>
         <p><i class="fas fa-download" style="width:18px;"></i> 다운로드 ${item.downloadCount}회</p>
         <p><i class="fas fa-calendar" style="width:18px;"></i> ${formatDate(item.createdAt)}</p>
       </div>
+      ${filesHtml}
     `,
-    showCancelButton: true,
-    confirmButtonText: '<i class="fas fa-download"></i> 다운로드',
-    cancelButtonText: '닫기',
-    confirmButtonColor: '#e8a020',
-  }).then((result) => {
-    if (result.isConfirmed) {
-      const link = document.createElement('a')
-      link.href = refStore.getDownloadUrl(item.id)
-      link.download = ''
-      document.body.appendChild(link)
-      link.click()
-      document.body.removeChild(link)
-    }
+    showConfirmButton: false,
+    showCloseButton: true,
   })
 }
 
@@ -256,7 +325,7 @@ async function openCategoryModal() {
   }
 }
 
-/* 자료 업로드 모달 (다중 파일 지원) */
+/* 자료 업로드 모달 (다중 파일 지원, 최대 5개) */
 async function openUploadModal() {
   if (categories.value.length === 0) {
     Swal.fire({ icon: 'warning', title: '카테고리 필요', text: '먼저 카테고리를 추가해주세요.' })
@@ -281,11 +350,11 @@ async function openUploadModal() {
         <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">설명 <small style="color:#999">(선택)</small></label>
         <textarea id="swal-ref-desc" class="swal2-textarea" placeholder="자료에 대한 설명" style="margin:0 0 16px 0;width:100%;box-sizing:border-box;min-height:80px;"></textarea>
 
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">첨부파일</label>
-        <input id="swal-ref-file" type="file" style="margin-bottom:8px;font-size:0.85rem;">
-        <p style="color:#999;font-size:0.78rem;margin-bottom:16px;">최대 10MB / PDF, 문서, 이미지, 압축파일 등</p>
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">첨부파일 <small style="color:#e8a020">(최대 5개)</small></label>
+        <input id="swal-ref-files" type="file" multiple style="margin-bottom:8px;font-size:0.85rem;">
+        <p id="swal-file-info" style="color:#999;font-size:0.78rem;margin-bottom:16px;">각 파일 최대 10MB / PDF, 문서, 이미지, 압축파일 등</p>
 
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">썸네일 이미지 <small style="color:#999">(선택)</small></label>
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">썸네일 이미지 <small style="color:#999">(선택, 1개)</small></label>
         <input id="swal-ref-thumb" type="file" accept="image/*" style="margin-bottom:4px;font-size:0.85rem;">
         <p style="color:#e8a020;font-size:0.78rem;"><i class="fas fa-info-circle"></i> 이미지 파일만 업로드 가능합니다 (JPG, PNG, GIF, WebP)</p>
       </div>
@@ -294,24 +363,47 @@ async function openUploadModal() {
     confirmButtonText: '<i class="fas fa-upload"></i> 업로드',
     cancelButtonText: '취소',
     confirmButtonColor: '#1a3a5c',
+    didOpen: () => {
+      const filesInput = document.getElementById('swal-ref-files')
+      const fileInfo = document.getElementById('swal-file-info')
+      filesInput.addEventListener('change', () => {
+        const count = filesInput.files.length
+        if (count > 5) {
+          fileInfo.style.color = '#e74c3c'
+          fileInfo.textContent = `파일은 최대 5개까지 선택 가능합니다. (현재 ${count}개)`
+        } else if (count > 0) {
+          fileInfo.style.color = '#1a3a5c'
+          fileInfo.textContent = `${count}개 파일 선택됨`
+        } else {
+          fileInfo.style.color = '#999'
+          fileInfo.textContent = '각 파일 최대 10MB / PDF, 문서, 이미지, 압축파일 등'
+        }
+      })
+    },
     preConfirm: () => {
       const categoryId = document.getElementById('swal-ref-cat').value
       const title = document.getElementById('swal-ref-title').value
       const description = document.getElementById('swal-ref-desc').value
-      const file = document.getElementById('swal-ref-file').files[0]
+      const files = document.getElementById('swal-ref-files').files
       const thumbnail = document.getElementById('swal-ref-thumb').files[0]
 
       if (!title) {
         Swal.showValidationMessage('제목을 입력해주세요.')
         return false
       }
-      if (!file) {
-        Swal.showValidationMessage('파일을 선택해주세요.')
+      if (files.length === 0) {
+        Swal.showValidationMessage('파일을 최소 1개 선택해주세요.')
         return false
       }
-      if (file.size > 10 * 1024 * 1024) {
-        Swal.showValidationMessage('파일 크기는 10MB를 초과할 수 없습니다.')
+      if (files.length > 5) {
+        Swal.showValidationMessage('파일은 최대 5개까지 업로드 가능합니다.')
         return false
+      }
+      for (let i = 0; i < files.length; i++) {
+        if (files[i].size > 10 * 1024 * 1024) {
+          Swal.showValidationMessage(`파일 "${files[i].name}"이(가) 10MB를 초과합니다.`)
+          return false
+        }
       }
       if (thumbnail && !thumbnail.type.startsWith('image/')) {
         Swal.showValidationMessage('썸네일은 이미지 파일만 가능합니다.')
@@ -322,7 +414,9 @@ async function openUploadModal() {
       formData.append('categoryId', categoryId)
       formData.append('title', title)
       if (description) formData.append('description', description)
-      formData.append('file', file)
+      for (let i = 0; i < files.length; i++) {
+        formData.append('files', files[i])
+      }
       if (thumbnail) formData.append('thumbnail', thumbnail)
       return formData
     }
@@ -424,12 +518,34 @@ async function handleDelete(id) {
   padding: 40px 24px 80px;
 }
 
+/* 헤더: 카테고리 + 검색 + 관리 */
+.board-header {
+  display: flex;
+  justify-content: space-between;
+  align-items: flex-start;
+  margin-bottom: 16px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.board-header-right {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  flex-wrap: wrap;
+}
+
+.board-count {
+  font-size: 0.9rem;
+  color: var(--text-body);
+  margin-bottom: 16px;
+}
+
 /* 카테고리 필터 */
 .category-filter {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
-  margin-bottom: 24px;
 }
 
 .filter-btn {
@@ -454,18 +570,38 @@ async function handleDelete(id) {
   border-color: var(--primary);
 }
 
-/* 관리자 헤더 */
-.board-header {
+/* 검색 */
+.search-box {
   display: flex;
-  justify-content: flex-end;
-  margin-bottom: 20px;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--white);
 }
 
-.admin-actions {
-  display: flex;
-  gap: 8px;
+.search-input {
+  padding: 8px 14px;
+  border: none;
+  font-size: 0.85rem;
+  width: 180px;
+  outline: none;
+  font-family: inherit;
 }
 
+.search-btn {
+  padding: 8px 14px;
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.search-btn:hover {
+  background: var(--primary-light);
+}
+
+/* 버튼 */
 .btn-primary {
   display: inline-flex;
   align-items: center;
@@ -509,11 +645,11 @@ async function handleDelete(id) {
   font-size: 0.85rem;
 }
 
-/* 자료 카드 그리드 */
+/* 자료 카드 그리드 — 큰 포스터 스타일 */
 .ref-grid {
   display: grid;
-  grid-template-columns: repeat(auto-fill, minmax(280px, 1fr));
-  gap: 20px;
+  grid-template-columns: repeat(4, 1fr);
+  gap: 24px;
 }
 
 .empty-state {
@@ -543,11 +679,11 @@ async function handleDelete(id) {
   transform: translateY(-4px);
 }
 
-/* 썸네일 영역 */
+/* 썸네일 영역 — 크게 */
 .ref-thumb {
   position: relative;
   width: 100%;
-  height: 180px;
+  height: 260px;
   background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
   overflow: hidden;
 }
@@ -567,9 +703,9 @@ async function handleDelete(id) {
 }
 
 .ref-thumb-placeholder i {
-  font-size: 3rem;
+  font-size: 4rem;
   color: var(--primary);
-  opacity: 0.25;
+  opacity: 0.2;
 }
 
 .thumb-fallback {
@@ -582,17 +718,17 @@ async function handleDelete(id) {
   content: '\f15b';
   font-family: 'Font Awesome 6 Free';
   font-weight: 900;
-  font-size: 3rem;
+  font-size: 4rem;
   color: var(--primary);
-  opacity: 0.25;
+  opacity: 0.2;
 }
 
 .ref-category-tag {
   position: absolute;
-  top: 10px;
-  left: 10px;
-  font-size: 0.72rem;
-  padding: 3px 10px;
+  top: 12px;
+  left: 12px;
+  font-size: 0.75rem;
+  padding: 4px 12px;
   background: rgba(26, 58, 92, 0.85);
   color: var(--white);
   border-radius: 12px;
@@ -601,14 +737,14 @@ async function handleDelete(id) {
 
 /* 카드 바디 */
 .ref-card-body {
-  padding: 16px 18px 18px;
+  padding: 16px 20px 20px;
 }
 
 .ref-card-title {
-  font-size: 0.95rem;
+  font-size: 1rem;
   font-weight: 600;
   color: var(--text-dark);
-  margin-bottom: 6px;
+  margin-bottom: 8px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
@@ -617,7 +753,7 @@ async function handleDelete(id) {
 }
 
 .ref-card-desc {
-  font-size: 0.82rem;
+  font-size: 0.85rem;
   color: var(--text-muted);
   margin-bottom: 10px;
   display: -webkit-box;
@@ -630,7 +766,7 @@ async function handleDelete(id) {
 .ref-card-meta {
   display: flex;
   gap: 14px;
-  font-size: 0.78rem;
+  font-size: 0.8rem;
   color: var(--text-muted);
   margin-bottom: 6px;
 }
@@ -639,15 +775,8 @@ async function handleDelete(id) {
   margin-right: 3px;
 }
 
-.ref-card-meta span {
-  white-space: nowrap;
-  overflow: hidden;
-  text-overflow: ellipsis;
-  max-width: 160px;
-}
-
 .ref-card-date {
-  font-size: 0.76rem;
+  font-size: 0.78rem;
   color: var(--text-muted);
 }
 
@@ -658,10 +787,10 @@ async function handleDelete(id) {
 /* 관리자 삭제 버튼 */
 .ref-card-delete {
   position: absolute;
-  top: 10px;
-  right: 10px;
-  width: 32px;
-  height: 32px;
+  top: 12px;
+  right: 12px;
+  width: 34px;
+  height: 34px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -669,7 +798,7 @@ async function handleDelete(id) {
   border: none;
   border-radius: 50%;
   color: #fff;
-  font-size: 0.8rem;
+  font-size: 0.85rem;
   cursor: pointer;
   opacity: 0;
   transition: var(--transition);
@@ -724,17 +853,46 @@ async function handleDelete(id) {
   cursor: not-allowed;
 }
 
+/* 맨위로 버튼 */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 48px;
+  height: 48px;
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+  z-index: 999;
+}
+
+.scroll-top-btn:hover {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+}
+
+@media (max-width: 1024px) {
+  .ref-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
+  .ref-thumb { height: 220px; }
+}
+
 @media (max-width: 768px) {
   .page-hero { height: 200px; }
   .page-hero-title { font-size: 1.6rem; }
-  .ref-grid { grid-template-columns: repeat(auto-fill, minmax(240px, 1fr)); gap: 14px; }
-  .ref-thumb { height: 150px; }
-  .admin-actions { flex-direction: column; width: 100%; }
-  .admin-actions .btn-outline,
-  .admin-actions .btn-primary { width: 100%; justify-content: center; }
+  .ref-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
+  .ref-thumb { height: 180px; }
+  .board-header { flex-direction: column; align-items: stretch; }
+  .board-header-right { justify-content: flex-end; }
+  .search-input { width: 140px; }
 }
 
 @media (max-width: 480px) {
   .ref-grid { grid-template-columns: 1fr; }
+  .ref-thumb { height: 220px; }
 }
 </style>

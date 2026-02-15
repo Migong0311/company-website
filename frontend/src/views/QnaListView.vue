@@ -12,9 +12,23 @@
     <div class="page-container">
       <div class="board-header">
         <p class="board-count">총 <strong>{{ totalElements }}</strong>건</p>
-        <router-link to="/qna/write" class="btn-primary">
-          <i class="fas fa-pen"></i> 글쓰기
-        </router-link>
+        <div class="board-header-right">
+          <div class="search-box">
+            <input
+              v-model="searchKeyword"
+              type="text"
+              placeholder="제목/내용 검색"
+              class="search-input"
+              @keydown.enter="handleSearch"
+            />
+            <button class="search-btn" @click="handleSearch">
+              <i class="fas fa-search"></i>
+            </button>
+          </div>
+          <router-link to="/qna/write" class="btn-primary">
+            <i class="fas fa-pen"></i> 글쓰기
+          </router-link>
+        </div>
       </div>
 
       <div class="board-table-wrap">
@@ -36,10 +50,18 @@
               v-for="post in posts"
               :key="post.id"
               class="clickable-row"
+              :class="{ 'notice-row': post.isNotice }"
               @click="goToDetail(post.id)"
             >
-              <td class="col-no">{{ post.id }}</td>
-              <td class="col-title">{{ post.title }}</td>
+              <td class="col-no">
+                <span v-if="post.isNotice" class="notice-badge">공지</span>
+                <span v-else>{{ post.id }}</span>
+              </td>
+              <td class="col-title">
+                <span v-if="post.isNotice" class="notice-title">{{ post.title }}</span>
+                <span v-else>{{ post.title }}</span>
+                <span v-if="post.commentCount > 0" class="comment-count">[{{ post.commentCount }}]</span>
+              </td>
               <td class="col-author">{{ post.authorName }}</td>
               <td class="col-date">{{ formatDate(post.createdAt) }}</td>
               <td class="col-views">{{ post.viewCount }}</td>
@@ -49,11 +71,7 @@
       </div>
 
       <div class="pagination" v-if="totalPages > 1">
-        <button
-          class="page-btn"
-          :disabled="currentPage === 0"
-          @click="changePage(currentPage - 1)"
-        >
+        <button class="page-btn" :disabled="currentPage === 0" @click="changePage(currentPage - 1)">
           <i class="fas fa-chevron-left"></i>
         </button>
         <button
@@ -65,38 +83,72 @@
         >
           {{ page }}
         </button>
-        <button
-          class="page-btn"
-          :disabled="currentPage === totalPages - 1"
-          @click="changePage(currentPage + 1)"
-        >
+        <button class="page-btn" :disabled="currentPage === totalPages - 1" @click="changePage(currentPage + 1)">
           <i class="fas fa-chevron-right"></i>
         </button>
       </div>
     </div>
+
+    <!-- 맨위로 버튼 -->
+    <button v-show="showScrollTop" class="scroll-top-btn" @click="scrollToTop" title="맨위로">
+      <i class="fas fa-arrow-up"></i>
+    </button>
   </div>
 </template>
 
 <script setup>
-import { onMounted } from 'vue'
+import { ref, onMounted, onUnmounted } from 'vue'
 import { useRouter } from 'vue-router'
 import { storeToRefs } from 'pinia'
 import { useQnaStore } from '@/stores/qna'
+
+const PAGE_SIZE = 15
 
 const router = useRouter()
 const qnaStore = useQnaStore()
 const { posts, totalPages, totalElements, currentPage } = storeToRefs(qnaStore)
 
+const searchKeyword = ref('')
+const isSearching = ref(false)
+const showScrollTop = ref(false)
+
 onMounted(() => {
-  qnaStore.fetchPosts()
+  qnaStore.fetchPosts(0, PAGE_SIZE)
+  window.addEventListener('scroll', handleScroll)
 })
+
+onUnmounted(() => {
+  window.removeEventListener('scroll', handleScroll)
+})
+
+function handleScroll() {
+  showScrollTop.value = window.scrollY > 300
+}
+
+function scrollToTop() {
+  window.scrollTo({ top: 0, behavior: 'smooth' })
+}
 
 function goToDetail(id) {
   router.push(`/qna/${id}`)
 }
 
 function changePage(page) {
-  qnaStore.fetchPosts(page)
+  if (isSearching.value && searchKeyword.value) {
+    qnaStore.searchPosts(searchKeyword.value, page, PAGE_SIZE)
+  } else {
+    qnaStore.fetchPosts(page, PAGE_SIZE)
+  }
+}
+
+function handleSearch() {
+  if (searchKeyword.value.trim()) {
+    isSearching.value = true
+    qnaStore.searchPosts(searchKeyword.value.trim(), 0, PAGE_SIZE)
+  } else {
+    isSearching.value = false
+    qnaStore.fetchPosts(0, PAGE_SIZE)
+  }
 }
 
 function formatDate(dateStr) {
@@ -166,11 +218,50 @@ function formatDate(dateStr) {
   justify-content: space-between;
   align-items: center;
   margin-bottom: 20px;
+  flex-wrap: wrap;
+  gap: 12px;
+}
+
+.board-header-right {
+  display: flex;
+  align-items: center;
+  gap: 10px;
 }
 
 .board-count {
   font-size: 0.95rem;
   color: var(--text-body);
+}
+
+/* 검색 */
+.search-box {
+  display: flex;
+  border: 1px solid var(--border);
+  border-radius: var(--radius-sm);
+  overflow: hidden;
+  background: var(--white);
+}
+
+.search-input {
+  padding: 8px 14px;
+  border: none;
+  font-size: 0.85rem;
+  width: 200px;
+  outline: none;
+  font-family: inherit;
+}
+
+.search-btn {
+  padding: 8px 14px;
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  cursor: pointer;
+  transition: var(--transition);
+}
+
+.search-btn:hover {
+  background: var(--primary-light);
 }
 
 .btn-primary {
@@ -248,6 +339,40 @@ function formatDate(dateStr) {
   color: var(--primary);
 }
 
+/* 공지 스타일 */
+.notice-row {
+  background: #fffde7;
+}
+
+.notice-row:hover {
+  background: #fff9c4;
+}
+
+.notice-badge {
+  display: inline-block;
+  padding: 2px 8px;
+  background: #f9a825;
+  color: #fff;
+  border-radius: 4px;
+  font-size: 0.75rem;
+  font-weight: 600;
+}
+
+.notice-title {
+  font-weight: 700;
+  color: #e65100;
+}
+
+.notice-row:hover .col-title {
+  color: #bf360c;
+}
+
+.comment-count {
+  color: var(--primary);
+  font-size: 0.82rem;
+  margin-left: 4px;
+}
+
 .empty-row {
   padding: 60px 16px !important;
   text-align: center !important;
@@ -293,11 +418,37 @@ function formatDate(dateStr) {
   cursor: not-allowed;
 }
 
+/* 맨위로 버튼 */
+.scroll-top-btn {
+  position: fixed;
+  bottom: 30px;
+  right: 30px;
+  width: 48px;
+  height: 48px;
+  background: var(--primary);
+  color: var(--white);
+  border: none;
+  border-radius: 50%;
+  font-size: 1.1rem;
+  cursor: pointer;
+  box-shadow: var(--shadow-md);
+  transition: var(--transition);
+  z-index: 999;
+}
+
+.scroll-top-btn:hover {
+  background: var(--primary-light);
+  transform: translateY(-2px);
+}
+
 @media (max-width: 768px) {
   .page-hero { height: 200px; }
   .page-hero-title { font-size: 1.6rem; }
   .col-no, .col-views { display: none; }
   .col-author { width: 80px; }
   .board-table th, .board-table td { padding: 12px 10px; font-size: 0.85rem; }
+  .board-header { flex-direction: column; align-items: stretch; }
+  .board-header-right { justify-content: space-between; }
+  .search-input { width: 140px; }
 }
 </style>

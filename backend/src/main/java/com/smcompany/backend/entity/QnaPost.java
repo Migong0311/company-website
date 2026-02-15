@@ -42,6 +42,10 @@ public class QnaPost {
     @Column(nullable = false, columnDefinition = "TEXT")
     private String content;
 
+    /** 공지글 여부 (관리자만 설정 가능) */
+    @Column(name = "is_notice")
+    private Boolean isNotice = false;
+
     /** 조회수 (기본값 0) */
     @Column(name = "view_count")
     private Integer viewCount = 0;
@@ -70,11 +74,12 @@ public class QnaPost {
     }
 
     @Builder
-    public QnaPost(String authorName, String password, String title, String content) {
+    public QnaPost(String authorName, String password, String title, String content, Boolean isNotice) {
         this.authorName = authorName;
         this.password = password;
         this.title = title;
         this.content = content;
+        this.isNotice = isNotice != null ? isNotice : false;
         this.viewCount = 0;
     }
 
@@ -82,8 +87,9 @@ public class QnaPost {
         this.viewCount++;
     }
 
-    public void update(String title, String content) {
+    public void update(String title, String content, Boolean isNotice) {
         this.title = title;
         this.content = content;
+        this.isNotice = isNotice != null ? isNotice : this.isNotice;
     }
 }

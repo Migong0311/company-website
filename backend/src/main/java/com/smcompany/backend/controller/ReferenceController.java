@@ -16,6 +16,7 @@ import org.springframework.web.multipart.MultipartFile;
 
 import java.net.URLEncoder;
 import java.nio.charset.StandardCharsets;
+import java.util.List;
 
 @RestController
 @RequestMapping("/api/references")
@@ -28,6 +29,13 @@ public class ReferenceController {
     public ResponseEntity<Page<ReferenceResponse>> getAllReferences(
             @PageableDefault(size = 10) Pageable pageable) {
         return ResponseEntity.ok(referenceService.getAllReferences(pageable));
+    }
+
+    @GetMapping("/search")
+    public ResponseEntity<Page<ReferenceResponse>> searchReferences(
+            @RequestParam String keyword,
+            @PageableDefault(size = 8) Pageable pageable) {
+        return ResponseEntity.ok(referenceService.searchReferences(keyword, pageable));
     }
 
     @GetMapping("/category/{categoryId}")
@@ -46,15 +54,19 @@ public class ReferenceController {
             @RequestParam("categoryId") Long categoryId,
             @RequestParam("title") String title,
             @RequestParam(value = "description", required = false) String description,
-            @RequestParam("file") MultipartFile file,
+            @RequestParam("files") List<MultipartFile> files,
             @RequestParam(value = "thumbnail", required = false) MultipartFile thumbnail) {
+
+        if (files.size() > 5) {
+            return ResponseEntity.badRequest().build();
+        }
 
         ReferenceRequest request = new ReferenceRequest();
         request.setCategoryId(categoryId);
         request.setTitle(title);
         request.setDescription(description);
 
-        return ResponseEntity.ok(referenceService.createReference(request, file, thumbnail));
+        return ResponseEntity.ok(referenceService.createReference(request, files, thumbnail));
     }
 
     @GetMapping("/{id}/thumbnail")
@@ -78,6 +90,20 @@ public class ReferenceController {
     public ResponseEntity<Resource> downloadFile(@PathVariable Long id) {
         Resource resource = referenceService.downloadFile(id);
         String fileName = referenceService.getOriginalFileName(id);
+        String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
+                .replace("+", "%20");
+
+        return ResponseEntity.ok()
+                .contentType(MediaType.APPLICATION_OCTET_STREAM)
+                .header(HttpHeaders.CONTENT_DISPOSITION,
+                        "attachment; filename*=UTF-8''" + encodedFileName)
+                .body(resource);
+    }
+
+    @GetMapping("/files/{fileId}/download")
+    public ResponseEntity<Resource> downloadAttachedFile(@PathVariable Long fileId) {
+        Resource resource = referenceService.downloadAttachedFile(fileId);
+        String fileName = referenceService.getAttachedFileName(fileId);
         String encodedFileName = URLEncoder.encode(fileName, StandardCharsets.UTF_8)
                 .replace("+", "%20");
 

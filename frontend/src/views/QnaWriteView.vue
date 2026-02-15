@@ -22,6 +22,12 @@
         <div v-if="isAdmin && !isEdit" class="admin-notice">
           <i class="fas fa-shield-alt"></i> 관리자 모드 — 비밀번호 없이 작성됩니다.
         </div>
+        <div v-if="isAdmin" class="form-group notice-check-group">
+          <label class="notice-check-label">
+            <input v-model="form.isNotice" type="checkbox" class="notice-checkbox" />
+            <span class="notice-check-text"><i class="fas fa-bullhorn"></i> 공지로 등록</span>
+          </label>
+        </div>
         <div class="form-group">
           <label class="form-label">제목</label>
           <input v-model="form.title" type="text" class="form-input" placeholder="제목을 입력하세요" />
@@ -65,7 +71,8 @@ const form = ref({
   authorName: '',
   password: '',
   title: '',
-  content: ''
+  content: '',
+  isNotice: false
 })
 
 onMounted(async () => {
@@ -82,6 +89,7 @@ onMounted(async () => {
     form.value.title = post.title
     form.value.content = post.content
     form.value.password = isAdminEdit.value ? 'admin' : (route.query.pw || '')
+    form.value.isNotice = post.isNotice || false
   }
 })
 
@@ -225,6 +233,35 @@ async function handleSubmit() {
   font-size: 0.85rem;
   font-weight: 500;
   margin-bottom: 24px;
+}
+
+.notice-check-group {
+  margin-bottom: 20px;
+}
+
+.notice-check-label {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  cursor: pointer;
+  user-select: none;
+}
+
+.notice-checkbox {
+  width: 18px;
+  height: 18px;
+  accent-color: #f9a825;
+  cursor: pointer;
+}
+
+.notice-check-text {
+  font-size: 0.9rem;
+  font-weight: 600;
+  color: #e65100;
+}
+
+.notice-check-text i {
+  margin-right: 4px;
 }
 
 .form-actions {
