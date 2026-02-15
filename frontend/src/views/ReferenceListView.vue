@@ -57,42 +57,32 @@
       <!-- 총 건수 -->
       <p class="board-count">총 <strong>{{ totalElements }}</strong>건</p>
 
-      <!-- 자료 카드 그리드 -->
+      <!-- 자료 카드 그리드 — 포스터 스타일 -->
       <div v-if="references.length === 0" class="empty-state">
         <i class="fas fa-folder-open"></i>
         <p>등록된 자료가 없습니다.</p>
       </div>
 
       <div v-else class="ref-grid">
-        <div v-for="item in references" :key="item.id" class="ref-card" @click="openDetail(item)">
-          <div class="ref-thumb">
+        <div v-for="item in references" :key="item.id" class="ref-item" @click="openDetail(item)">
+          <div class="ref-poster">
             <img
               v-if="item.thumbnailPath"
               :src="refStore.getThumbnailUrl(item.id)"
               :alt="item.title"
-              class="ref-thumb-img"
+              class="ref-poster-img"
               @error="handleThumbError"
             />
-            <div v-else class="ref-thumb-placeholder">
+            <div v-else class="ref-poster-placeholder">
               <i :class="getFileIcon(item.fileName)"></i>
+              <span class="placeholder-ext">{{ getFileExt(item.fileName) }}</span>
             </div>
-            <span class="ref-category-tag" v-if="item.categoryName">{{ item.categoryName }}</span>
+            <!-- 관리자 삭제 버튼 -->
+            <button v-if="isAdmin" class="ref-delete-btn" @click.stop="handleDelete(item.id)" title="삭제">
+              <i class="fas fa-trash"></i>
+            </button>
           </div>
-          <div class="ref-card-body">
-            <h3 class="ref-card-title">{{ item.title }}</h3>
-            <p class="ref-card-desc" v-if="item.description">{{ item.description }}</p>
-            <div class="ref-card-meta">
-              <span><i class="fas fa-paperclip"></i> {{ getFileCount(item) }}개 파일</span>
-              <span><i class="fas fa-download"></i> {{ item.downloadCount }}회</span>
-            </div>
-            <div class="ref-card-date">
-              <i class="fas fa-calendar"></i> {{ formatDate(item.createdAt) }}
-            </div>
-          </div>
-          <!-- 관리자 삭제 버튼 -->
-          <button v-if="isAdmin" class="ref-card-delete" @click.stop="handleDelete(item.id)" title="삭제">
-            <i class="fas fa-trash"></i>
-          </button>
+          <p class="ref-title">{{ item.title }}</p>
         </div>
       </div>
 
@@ -215,6 +205,11 @@ function getFileIcon(fileName) {
   return icons[ext] || 'fas fa-file'
 }
 
+function getFileExt(fileName) {
+  if (!fileName) return ''
+  return fileName.split('.').pop().toUpperCase()
+}
+
 function handleThumbError(e) {
   e.target.style.display = 'none'
   e.target.parentElement.classList.add('thumb-fallback')
@@ -223,12 +218,12 @@ function handleThumbError(e) {
 /* 자료 상세 모달 */
 function openDetail(item) {
   const thumbHtml = item.thumbnailPath
-    ? `<div style="margin-bottom:16px;"><img src="${refStore.getThumbnailUrl(item.id)}" style="max-width:100%;max-height:400px;border-radius:8px;object-fit:contain;" /></div>`
+    ? `<div style="margin-bottom:16px;text-align:center;"><img src="${refStore.getThumbnailUrl(item.id)}" style="max-width:100%;max-height:450px;border-radius:8px;object-fit:contain;border:1px solid #eee;" /></div>`
     : ''
 
   // 파일 목록 생성
   let filesHtml = `<div style="text-align:left;margin-top:12px;">
-    <p style="font-weight:600;font-size:0.85rem;margin-bottom:8px;"><i class="fas fa-paperclip"></i> 첨부파일</p>
+    <p style="font-weight:600;font-size:0.85rem;margin-bottom:8px;"><i class="fas fa-paperclip"></i> 첨부파일 (${getFileCount(item)}개)</p>
     <div style="display:flex;flex-direction:column;gap:6px;">`
 
   // 메인 파일
@@ -252,7 +247,7 @@ function openDetail(item) {
 
   Swal.fire({
     title: item.title,
-    width: 600,
+    width: 620,
     html: `
       ${thumbHtml}
       ${item.description ? `<p style="text-align:left;color:#555;margin-bottom:12px;line-height:1.6;">${item.description}</p>` : ''}
@@ -325,7 +320,7 @@ async function openCategoryModal() {
   }
 }
 
-/* 자료 업로드 모달 (다중 파일 지원, 최대 5개) */
+/* 자료 업로드 모달 (5개 개별 파일 입력란) */
 async function openUploadModal() {
   if (categories.value.length === 0) {
     Swal.fire({ icon: 'warning', title: '카테고리 필요', text: '먼저 카테고리를 추가해주세요.' })
@@ -334,9 +329,16 @@ async function openUploadModal() {
 
   const catOptions = categories.value.map(c => `<option value="${c.id}">${c.name}</option>`).join('')
 
+  const fileInputsHtml = [1,2,3,4,5].map(i => `
+    <div style="display:flex;align-items:center;gap:8px;margin-bottom:8px;">
+      <span style="min-width:60px;font-size:0.82rem;color:#555;font-weight:500;">파일 ${i}</span>
+      <input id="swal-ref-file-${i}" type="file" style="font-size:0.82rem;flex:1;">
+    </div>
+  `).join('')
+
   const { value: formValues } = await Swal.fire({
     title: '자료 업로드',
-    width: 560,
+    width: 580,
     html: `
       <div style="text-align:left;">
         <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">카테고리</label>
@@ -350,58 +352,46 @@ async function openUploadModal() {
         <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">설명 <small style="color:#999">(선택)</small></label>
         <textarea id="swal-ref-desc" class="swal2-textarea" placeholder="자료에 대한 설명" style="margin:0 0 16px 0;width:100%;box-sizing:border-box;min-height:80px;"></textarea>
 
-        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">첨부파일 <small style="color:#e8a020">(최대 5개)</small></label>
-        <input id="swal-ref-files" type="file" multiple style="margin-bottom:8px;font-size:0.85rem;">
-        <p id="swal-file-info" style="color:#999;font-size:0.78rem;margin-bottom:16px;">각 파일 최대 10MB / PDF, 문서, 이미지, 압축파일 등</p>
+        <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:8px;">첨부파일 <small style="color:#e8a020">(최대 5개, 각 10MB)</small></label>
+        ${fileInputsHtml}
+        <p style="color:#999;font-size:0.75rem;margin-bottom:16px;">PDF, 문서, 이미지, 압축파일 등 / 파일 1은 필수</p>
 
         <label style="font-weight:600;font-size:0.85rem;display:block;margin-bottom:6px;">썸네일 이미지 <small style="color:#999">(선택, 1개)</small></label>
         <input id="swal-ref-thumb" type="file" accept="image/*" style="margin-bottom:4px;font-size:0.85rem;">
-        <p style="color:#e8a020;font-size:0.78rem;"><i class="fas fa-info-circle"></i> 이미지 파일만 업로드 가능합니다 (JPG, PNG, GIF, WebP)</p>
+        <p style="color:#e8a020;font-size:0.78rem;"><i class="fas fa-info-circle"></i> 이미지 파일만 업로드 (JPG, PNG, GIF, WebP)</p>
       </div>
     `,
     showCancelButton: true,
     confirmButtonText: '<i class="fas fa-upload"></i> 업로드',
     cancelButtonText: '취소',
     confirmButtonColor: '#1a3a5c',
-    didOpen: () => {
-      const filesInput = document.getElementById('swal-ref-files')
-      const fileInfo = document.getElementById('swal-file-info')
-      filesInput.addEventListener('change', () => {
-        const count = filesInput.files.length
-        if (count > 5) {
-          fileInfo.style.color = '#e74c3c'
-          fileInfo.textContent = `파일은 최대 5개까지 선택 가능합니다. (현재 ${count}개)`
-        } else if (count > 0) {
-          fileInfo.style.color = '#1a3a5c'
-          fileInfo.textContent = `${count}개 파일 선택됨`
-        } else {
-          fileInfo.style.color = '#999'
-          fileInfo.textContent = '각 파일 최대 10MB / PDF, 문서, 이미지, 압축파일 등'
-        }
-      })
-    },
     preConfirm: () => {
       const categoryId = document.getElementById('swal-ref-cat').value
       const title = document.getElementById('swal-ref-title').value
       const description = document.getElementById('swal-ref-desc').value
-      const files = document.getElementById('swal-ref-files').files
       const thumbnail = document.getElementById('swal-ref-thumb').files[0]
 
       if (!title) {
         Swal.showValidationMessage('제목을 입력해주세요.')
         return false
       }
+
+      // 5개 개별 파일 입력란에서 파일 수집
+      const files = []
+      for (let i = 1; i <= 5; i++) {
+        const input = document.getElementById(`swal-ref-file-${i}`)
+        if (input.files[0]) {
+          files.push(input.files[0])
+        }
+      }
+
       if (files.length === 0) {
         Swal.showValidationMessage('파일을 최소 1개 선택해주세요.')
         return false
       }
-      if (files.length > 5) {
-        Swal.showValidationMessage('파일은 최대 5개까지 업로드 가능합니다.')
-        return false
-      }
-      for (let i = 0; i < files.length; i++) {
-        if (files[i].size > 10 * 1024 * 1024) {
-          Swal.showValidationMessage(`파일 "${files[i].name}"이(가) 10MB를 초과합니다.`)
+      for (const f of files) {
+        if (f.size > 10 * 1024 * 1024) {
+          Swal.showValidationMessage(`파일 "${f.name}"이(가) 10MB를 초과합니다.`)
           return false
         }
       }
@@ -414,8 +404,8 @@ async function openUploadModal() {
       formData.append('categoryId', categoryId)
       formData.append('title', title)
       if (description) formData.append('description', description)
-      for (let i = 0; i < files.length; i++) {
-        formData.append('files', files[i])
+      for (const f of files) {
+        formData.append('files', f)
       }
       if (thumbnail) formData.append('thumbnail', thumbnail)
       return formData
@@ -518,7 +508,7 @@ async function handleDelete(id) {
   padding: 40px 24px 80px;
 }
 
-/* 헤더: 카테고리 + 검색 + 관리 */
+/* 헤더 */
 .board-header {
   display: flex;
   justify-content: space-between;
@@ -538,10 +528,10 @@ async function handleDelete(id) {
 .board-count {
   font-size: 0.9rem;
   color: var(--text-body);
-  margin-bottom: 16px;
+  margin-bottom: 20px;
 }
 
-/* 카테고리 필터 */
+/* 카테고리 */
 .category-filter {
   display: flex;
   flex-wrap: wrap;
@@ -645,11 +635,11 @@ async function handleDelete(id) {
   font-size: 0.85rem;
 }
 
-/* 자료 카드 그리드 — 큰 포스터 스타일 */
+/* 포스터형 그리드 */
 .ref-grid {
   display: grid;
   grid-template-columns: repeat(4, 1fr);
-  gap: 24px;
+  gap: 28px 24px;
 }
 
 .empty-state {
@@ -664,52 +654,65 @@ async function handleDelete(id) {
   opacity: 0.3;
 }
 
-.ref-card {
-  position: relative;
-  background: var(--white);
-  border-radius: var(--radius-md);
-  box-shadow: var(--shadow-sm);
-  overflow: hidden;
+.ref-item {
   cursor: pointer;
-  transition: var(--transition);
 }
 
-.ref-card:hover {
-  box-shadow: var(--shadow-md);
+.ref-item:hover .ref-poster {
+  box-shadow: 0 8px 24px rgba(0, 0, 0, 0.15);
   transform: translateY(-4px);
 }
 
-/* 썸네일 영역 — 크게 */
-.ref-thumb {
-  position: relative;
-  width: 100%;
-  height: 260px;
-  background: linear-gradient(135deg, #f0f4f8 0%, #e2e8f0 100%);
-  overflow: hidden;
+.ref-item:hover .ref-title {
+  color: var(--primary);
 }
 
-.ref-thumb-img {
+/* 포스터 이미지 영역 */
+.ref-poster {
+  position: relative;
+  width: 100%;
+  aspect-ratio: 3 / 4;
+  border: 1px solid #e0e0e0;
+  border-radius: 4px;
+  overflow: hidden;
+  background: #f8f9fa;
+  transition: all 0.3s ease;
+}
+
+.ref-poster-img {
   width: 100%;
   height: 100%;
   object-fit: cover;
 }
 
-.ref-thumb-placeholder {
+.ref-poster-placeholder {
   width: 100%;
   height: 100%;
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
+  gap: 8px;
+  background: linear-gradient(135deg, #f5f7fa 0%, #e8ecf1 100%);
 }
 
-.ref-thumb-placeholder i {
-  font-size: 4rem;
+.ref-poster-placeholder i {
+  font-size: 3.5rem;
   color: var(--primary);
   opacity: 0.2;
 }
 
+.placeholder-ext {
+  font-size: 0.8rem;
+  font-weight: 700;
+  color: var(--primary);
+  opacity: 0.3;
+  letter-spacing: 1px;
+}
+
 .thumb-fallback {
   display: flex;
+  flex-direction: column;
   align-items: center;
   justify-content: center;
 }
@@ -718,79 +721,32 @@ async function handleDelete(id) {
   content: '\f15b';
   font-family: 'Font Awesome 6 Free';
   font-weight: 900;
-  font-size: 4rem;
+  font-size: 3.5rem;
   color: var(--primary);
   opacity: 0.2;
 }
 
-.ref-category-tag {
-  position: absolute;
-  top: 12px;
-  left: 12px;
-  font-size: 0.75rem;
-  padding: 4px 12px;
-  background: rgba(26, 58, 92, 0.85);
-  color: var(--white);
-  border-radius: 12px;
-  backdrop-filter: blur(4px);
-}
-
-/* 카드 바디 */
-.ref-card-body {
-  padding: 16px 20px 20px;
-}
-
-.ref-card-title {
-  font-size: 1rem;
-  font-weight: 600;
+/* 제목 (이미지 바깥 아래) */
+.ref-title {
+  margin-top: 10px;
+  font-size: 0.9rem;
+  font-weight: 500;
   color: var(--text-dark);
-  margin-bottom: 8px;
-  display: -webkit-box;
-  -webkit-line-clamp: 2;
-  -webkit-box-orient: vertical;
-  overflow: hidden;
   line-height: 1.4;
-}
-
-.ref-card-desc {
-  font-size: 0.85rem;
-  color: var(--text-muted);
-  margin-bottom: 10px;
   display: -webkit-box;
   -webkit-line-clamp: 2;
   -webkit-box-orient: vertical;
   overflow: hidden;
-  line-height: 1.5;
+  transition: color 0.2s;
 }
 
-.ref-card-meta {
-  display: flex;
-  gap: 14px;
-  font-size: 0.8rem;
-  color: var(--text-muted);
-  margin-bottom: 6px;
-}
-
-.ref-card-meta i {
-  margin-right: 3px;
-}
-
-.ref-card-date {
-  font-size: 0.78rem;
-  color: var(--text-muted);
-}
-
-.ref-card-date i {
-  margin-right: 3px;
-}
-
-/* 관리자 삭제 버튼 */
-.ref-card-delete {
+/* 관리자 삭제 */
+.ref-delete-btn {
   position: absolute;
-  top: 12px;
-  right: 12px;
-  width: 34px;
-  height: 34px;
+  top: 8px;
+  right: 8px;
+  width: 30px;
+  height: 30px;
   display: flex;
   align-items: center;
   justify-content: center;
@@ -798,17 +754,17 @@ async function handleDelete(id) {
   border: none;
   border-radius: 50%;
   color: #fff;
-  font-size: 0.85rem;
+  font-size: 0.8rem;
   cursor: pointer;
   opacity: 0;
   transition: var(--transition);
 }
 
-.ref-card:hover .ref-card-delete {
+.ref-item:hover .ref-delete-btn {
   opacity: 1;
 }
 
-.ref-card-delete:hover {
+.ref-delete-btn:hover {
   background: #c0392b;
   transform: scale(1.1);
 }
@@ -853,7 +809,7 @@ async function handleDelete(id) {
   cursor: not-allowed;
 }
 
-/* 맨위로 버튼 */
+/* 맨위로 */
 .scroll-top-btn {
   position: fixed;
   bottom: 30px;
@@ -878,21 +834,19 @@ async function handleDelete(id) {
 
 @media (max-width: 1024px) {
   .ref-grid { grid-template-columns: repeat(3, 1fr); gap: 20px; }
-  .ref-thumb { height: 220px; }
 }
 
 @media (max-width: 768px) {
   .page-hero { height: 200px; }
   .page-hero-title { font-size: 1.6rem; }
-  .ref-grid { grid-template-columns: repeat(2, 1fr); gap: 14px; }
-  .ref-thumb { height: 180px; }
+  .ref-grid { grid-template-columns: repeat(2, 1fr); gap: 16px; }
   .board-header { flex-direction: column; align-items: stretch; }
   .board-header-right { justify-content: flex-end; }
   .search-input { width: 140px; }
 }
 
 @media (max-width: 480px) {
-  .ref-grid { grid-template-columns: 1fr; }
-  .ref-thumb { height: 220px; }
+  .ref-grid { grid-template-columns: repeat(2, 1fr); gap: 12px; }
+  .ref-title { font-size: 0.82rem; }
 }
 </style>

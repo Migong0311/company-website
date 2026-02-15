@@ -318,7 +318,7 @@ function formatDate(dateStr) {
   border-bottom: 1px solid var(--border);
 }
 
-.col-no { width: 70px; }
+.col-no { width: 90px; }
 .col-title { text-align: left !important; }
 .col-author { width: 100px; }
 .col-date { width: 110px; }
@@ -350,12 +350,14 @@ function formatDate(dateStr) {
 
 .notice-badge {
   display: inline-block;
-  padding: 2px 8px;
+  padding: 3px 12px;
   background: #f9a825;
   color: #fff;
   border-radius: 4px;
   font-size: 0.75rem;
   font-weight: 600;
+  white-space: nowrap;
+  letter-spacing: 1px;
 }
 
 .notice-title {

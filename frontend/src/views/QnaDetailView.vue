@@ -11,6 +11,9 @@
 
     <div class="page-container" v-if="post">
       <div class="post-card">
+        <div v-if="post.isNotice" class="notice-banner">
+          <i class="fas fa-bullhorn"></i> 공지사항
+        </div>
         <div class="post-header">
           <h2 class="post-title">{{ post.title }}</h2>
           <div class="post-meta">
@@ -24,7 +27,7 @@
           <router-link to="/qna" class="btn-outline">
             <i class="fas fa-list"></i> 목록
           </router-link>
-          <div class="post-actions-right">
+          <div class="post-actions-right" v-if="!isAdminPost || isAdmin">
             <button class="btn-outline" @click="handleEdit">
               <i class="fas fa-edit"></i> 수정
             </button>
@@ -50,6 +53,7 @@
             <CommentItem
               :comment="comment"
               :depth="0"
+              :isCurrentUserAdmin="isAdmin"
               @reply="openReply"
               @edit="openEditComment"
               @delete="handleDeleteComment"
@@ -104,6 +108,8 @@ watch(isAdmin, (val) => {
   if (val) commentForm.value.authorName = '관리자'
   else commentForm.value.authorName = ''
 }, { immediate: true })
+
+const isAdminPost = computed(() => post.value?.authorName === '관리자')
 
 const formattedContent = computed(() => {
   if (!post.value?.content) return ''
@@ -430,6 +436,22 @@ async function handleDeleteComment(commentId) {
   border-radius: var(--radius-md);
   box-shadow: var(--shadow-sm);
   overflow: hidden;
+}
+
+.notice-banner {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 32px;
+  background: linear-gradient(135deg, #fff8e1 0%, #fffde7 100%);
+  border-bottom: 2px solid #f9a825;
+  color: #e65100;
+  font-size: 0.9rem;
+  font-weight: 700;
+}
+
+.notice-banner i {
+  color: #f9a825;
 }
 
 .post-header {

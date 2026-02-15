@@ -17,12 +17,14 @@
           <button class="comment-btn" @click="$emit('reply', comment.id)">
             <i class="fas fa-reply"></i> 답글
           </button>
-          <button class="comment-btn" @click="$emit('edit', comment.id)">
-            <i class="fas fa-edit"></i> 수정
-          </button>
-          <button class="comment-btn comment-btn-delete" @click="$emit('delete', comment.id)">
-            <i class="fas fa-trash"></i> 삭제
-          </button>
+          <template v-if="!comment.isAdmin || isCurrentUserAdmin">
+            <button class="comment-btn" @click="$emit('edit', comment.id)">
+              <i class="fas fa-edit"></i> 수정
+            </button>
+            <button class="comment-btn comment-btn-delete" @click="$emit('delete', comment.id)">
+              <i class="fas fa-trash"></i> 삭제
+            </button>
+          </template>
         </div>
       </div>
     </div>
@@ -32,6 +34,7 @@
         :key="child.id"
         :comment="child"
         :depth="depth + 1"
+        :isCurrentUserAdmin="isCurrentUserAdmin"
         @reply="(id) => $emit('reply', id)"
         @edit="(id) => $emit('edit', id)"
         @delete="(id) => $emit('delete', id)"
@@ -43,7 +46,8 @@
 <script setup>
 defineProps({
   comment: { type: Object, required: true },
-  depth: { type: Number, default: 0 }
+  depth: { type: Number, default: 0 },
+  isCurrentUserAdmin: { type: Boolean, default: false }
 })
 
 defineEmits(['reply', 'edit', 'delete'])
