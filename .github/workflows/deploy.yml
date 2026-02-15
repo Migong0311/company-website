@@ -2,7 +2,7 @@ name: CI/CD Pipeline
 
 on:
   push:
-    branches: [ "dev" ]
+    branches: [ "main" ]
 
 permissions:
   contents: read
@@ -56,7 +56,7 @@ jobs:
           timeout: 60s
           script: |
             cd ~/workspace/sm-osh-company-website
-            git pull origin dev
+            git pull origin main
 
             # [중요] GitHub Secrets 내용을 .env 파일로 생성
             # (기존 파일이 있어도 덮어씁니다)
