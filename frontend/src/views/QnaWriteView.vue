@@ -13,11 +13,14 @@
       <div class="form-card">
         <div class="form-group">
           <label class="form-label">작성자</label>
-          <input v-model="form.authorName" type="text" class="form-input" placeholder="이름을 입력하세요" />
+          <input v-model="form.authorName" type="text" class="form-input" placeholder="이름을 입력하세요" :disabled="isAdmin" />
         </div>
-        <div class="form-group" v-if="!isEdit">
+        <div class="form-group" v-if="!isEdit && !isAdmin">
           <label class="form-label">비밀번호</label>
           <input v-model="form.password" type="password" class="form-input" placeholder="수정/삭제 시 필요합니다" />
+        </div>
+        <div v-if="isAdmin && !isEdit" class="admin-notice">
+          <i class="fas fa-shield-alt"></i> 관리자 모드 — 비밀번호 없이 작성됩니다.
         </div>
         <div class="form-group">
           <label class="form-label">제목</label>
@@ -44,14 +47,19 @@
 <script setup>
 import { ref, computed, onMounted } from 'vue'
 import { useRoute, useRouter } from 'vue-router'
+import { storeToRefs } from 'pinia'
 import { useQnaStore } from '@/stores/qna'
+import { useAuthStore } from '@/stores/auth'
 import Swal from 'sweetalert2'
 
 const route = useRoute()
 const router = useRouter()
 const qnaStore = useQnaStore()
+const authStore = useAuthStore()
+const { isLoggedIn: isAdmin } = storeToRefs(authStore)
 
 const isEdit = computed(() => !!route.params.id)
+const isAdminEdit = computed(() => route.query.admin === '1')
 
 const form = ref({
   authorName: '',
@@ -61,12 +69,19 @@ const form = ref({
 })
 
 onMounted(async () => {
+  await authStore.checkLogin()
+
+  if (isAdmin.value && !isEdit.value) {
+    form.value.authorName = '관리자'
+    form.value.password = 'admin'
+  }
+
   if (isEdit.value) {
     const post = await qnaStore.fetchPost(route.params.id)
     form.value.authorName = post.authorName
     form.value.title = post.title
     form.value.content = post.content
-    form.value.password = route.query.pw || ''
+    form.value.password = isAdminEdit.value ? 'admin' : (route.query.pw || '')
   }
 })
 
@@ -75,7 +90,7 @@ async function handleSubmit() {
     Swal.fire({ icon: 'warning', title: '입력 필요', text: '작성자, 제목, 내용을 모두 입력해주세요.' })
     return
   }
-  if (!isEdit.value && !form.value.password) {
+  if (!isEdit.value && !isAdmin.value && !form.value.password) {
     Swal.fire({ icon: 'warning', title: '입력 필요', text: '비밀번호를 입력해주세요.' })
     return
   }
@@ -187,10 +202,29 @@ async function handleSubmit() {
   box-shadow: 0 0 0 3px rgba(26, 58, 92, 0.1);
 }
 
+.form-input:disabled {
+  background: var(--bg-light);
+  color: var(--primary);
+  font-weight: 500;
+}
+
 .form-textarea {
   resize: vertical;
   min-height: 240px;
   line-height: 1.7;
+}
+
+.admin-notice {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  padding: 12px 16px;
+  background: rgba(26, 58, 92, 0.06);
+  border-radius: var(--radius-sm);
+  color: var(--primary);
+  font-size: 0.85rem;
+  font-weight: 500;
+  margin-bottom: 24px;
 }
 
 .form-actions {

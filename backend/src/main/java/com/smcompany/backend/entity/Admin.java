@@ -50,4 +50,12 @@ public class Admin {
         this.password = password;
         this.name = name;
     }
+
+    public void updatePassword(String encodedPassword) {
+        this.password = encodedPassword;
+    }
+
+    public void updateProfile(String name) {
+        this.name = name;
+    }
 }

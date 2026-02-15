@@ -53,8 +53,12 @@ public class QnaController {
 
     @PutMapping("/{id}")
     public ResponseEntity<QnaPostResponse> updatePost(
-            @PathVariable Long id, @Valid @RequestBody QnaPostRequest request) {
-        if (!qnaService.checkPostPassword(id, request.getPassword())) {
+            @PathVariable Long id, @Valid @RequestBody QnaPostRequest request,
+            HttpSession session) {
+        String admin = (String) session.getAttribute("admin");
+        boolean isAdmin = admin != null;
+
+        if (!isAdmin && !qnaService.checkPostPassword(id, request.getPassword())) {
             return ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok(qnaService.updatePost(id, request));
@@ -99,8 +103,12 @@ public class QnaController {
 
     @PutMapping("/comments/{commentId}")
     public ResponseEntity<QnaCommentResponse> updateComment(
-            @PathVariable Long commentId, @Valid @RequestBody QnaCommentUpdateRequest request) {
-        if (!qnaService.checkCommentPassword(commentId, request.getPassword())) {
+            @PathVariable Long commentId, @Valid @RequestBody QnaCommentUpdateRequest request,
+            HttpSession session) {
+        String admin = (String) session.getAttribute("admin");
+        boolean isAdmin = admin != null;
+
+        if (!isAdmin && !qnaService.checkCommentPassword(commentId, request.getPassword())) {
             return ResponseEntity.status(403).build();
         }
         return ResponseEntity.ok(qnaService.updateComment(commentId, request.getContent()));
