@@ -4,10 +4,11 @@ services:
     image: ghcr.io/migong0311/sm-osh-company-website-backend:latest
     build: ./backend
     container_name: safety-backend
+    restart: on-failure
     ports:
       - "8080:8080"
     environment:
-      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/${MYSQL_DATABASE:-ssafit}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false
+      - SPRING_DATASOURCE_URL=jdbc:mysql://db:3306/${MYSQL_DATABASE:-ssafit}?serverTimezone=Asia/Seoul&characterEncoding=UTF-8&useSSL=false&allowPublicKeyRetrieval=true
       - SPRING_DATASOURCE_USERNAME=${MYSQL_USERNAME:-root}
       - SPRING_DATASOURCE_PASSWORD=${MYSQL_PASSWORD:-ssafit_password}
       - SPRING_DATASOURCE_DRIVER_CLASS_NAME=com.mysql.cj.jdbc.Driver
@@ -15,7 +16,8 @@ services:
       - APP_ADMIN_PASSWORD=${APP_ADMIN_PASSWORD:-admin1234}
       - APP_ADMIN_NAME=${APP_ADMIN_NAME:-관리자}
     depends_on:
-      - db
+      db:
+        condition: service_healthy
     networks:
       - app-network
 
@@ -41,6 +43,12 @@ services:
       - --collation-server=utf8mb4_unicode_ci
     volumes:
       - mysql_data:/var/lib/mysql
+    healthcheck:
+      test: ["CMD", "mysqladmin", "ping", "-h", "localhost"]
+      interval: 5s
+      timeout: 3s
+      retries: 10
+      start_period: 30s
     networks:
       - app-network
 
